@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
   <title>Register User</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
@@ -10,26 +11,37 @@
   <h1>User Registration</h1>
 
   <div class="card">
-    <input id="name" placeholder="Full Name" required>
-    <input id="phone" placeholder="Phone Number" required>
+    <input id="name" placeholder="Full Name" />
+    <input id="phone" placeholder="Phone Number" />
 
-    <select id="gender" required>
+    <select id="gender">
       <option value="">Select Gender</option>
       <option value="Male">Male</option>
       <option value="Female">Female</option>
       <option value="Other">Other</option>
     </select>
 
-    <input id="aadhaarNumber" placeholder="Aadhaar Number" required>
+    <input id="aadhaarNumber" placeholder="Aadhaar Number" />
 
-    <button id="btn" type="button" onclick="registerUser()">Register</button>
+    <button id="btn" type="button">Register</button>
 
     <div id="loader" style="display:none; margin-top:10px;">⏳ Registering...</div>
     <div id="result" style="margin-top:15px;"></div>
   </div>
 </div>
 
+<!-- 🔥 CONFIG: Set this when you deploy -->
 <script>
+  // 👉 WHEN LOCAL TESTING:
+  // const API_BASE = "http://localhost:3000";
+
+  // 👉 WHEN USING RENDER:
+  const API_BASE = "https://YOUR-RENDER-APP.onrender.com";  // <-- CHANGE THIS
+</script>
+
+<script>
+document.getElementById("btn").addEventListener("click", registerUser);
+
 function registerUser() {
   const btn = document.getElementById("btn");
   const loader = document.getElementById("loader");
@@ -51,36 +63,32 @@ function registerUser() {
   loader.style.display = "block";
   result.innerHTML = "";
 
-  fetch("http://192.168.137.1:3000/register", {
+  fetch(`${API_BASE}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   })
-  .then(r => r.json())
+  .then(res => res.json())
   .then(data => {
     btn.disabled = false;
     loader.style.display = "none";
 
     if (!data.success) {
-      result.innerHTML = `<h3 style="color:red;">Registration failed ❌</h3>`;
+      result.innerHTML = `<h3 style="color:red;">Registration failed</h3>`;
       return;
     }
 
-    // Save the user & QR info so qr.html can show it
+    // Save entire response for qr.html
     localStorage.setItem("qrUser", JSON.stringify(data));
 
-    result.innerHTML = `<h3 style="color:green;">Redirecting...</h3>`;
-
-    // Small delay ensures redirect works on all browsers
-    setTimeout(() => {
-      window.location.href = "qr.html";
-    }, 300);
+    // Redirect to QR page
+    window.location.href = "qr.html";
   })
   .catch(err => {
-    console.log(err);
+    console.error(err);
     btn.disabled = false;
     loader.style.display = "none";
-    alert("Registration failed. Server unreachable.");
+    alert("Registration failed. Check backend connection.");
   });
 }
 </script>

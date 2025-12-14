@@ -3,8 +3,6 @@ const QRCode = require("qrcode");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const fs = require("fs");
-const path = require("path");
 require("dotenv").config();
 
 const app = express();
@@ -13,9 +11,9 @@ app.use(cors());
 
 /* ---------------- MONGODB CONNECTION ---------------- */
 mongoose
-  .connect(process.env.MONGO_URI, { dbName: "qrSystem" })
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log("MongoDB Error:", err));
+  .catch(err => console.log("MongoDB Error:", err));
 
 /* ---------------- USER SCHEMA ---------------- */
 const userSchema = new mongoose.Schema({
@@ -31,52 +29,48 @@ const userSchema = new mongoose.Schema({
   lastGateUpdate: Date,
   lastWashroomUpdate: Date,
 
-  qrCode: String
+  qrImageUrl: String   // will be filled after AWS
 });
 
 const User = mongoose.model("User", userSchema);
 
 /* ---------------- REGISTER USER ---------------- */
 app.post("/register", async (req, res) => {
-  console.log("REGISTER API CALLED:", req.body);
   const { name, phone, gender, aadhaarNumber } = req.body;
+
+  if (!name || !phone || !gender || !aadhaarNumber) {
+    return res.json({ success: false, message: "All fields required" });
+  }
 
   const manualCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  const newUser = new User({
+  const user = new User({
     name,
     phone,
     gender,
     aadhaarNumber,
-    manualCode,
-    gateStatus: "OUT",
-    washroomStatus: "OUT"
+    manualCode
   });
 
-  await newUser.save(); // get _id first
+  await user.save();
 
-  const scanUrl = `http://192.168.137.1:3000/scan/${newUser._id}`;
+  const scanUrl = `${process.env.BASE_URL}/scan/${user._id}`;
 
-  // Generate PNG QRgnore
-  const qrPngBuffer = await QRCode.toBuffer(scanUrl);
-
-  // Create folder if not exists
-  const qrFolder = path.join(__dirname, "qr-codes");
-  if (!fs.existsSync(qrFolder)) fs.mkdirSync(qrFolder);
-
-  const fileName = `${newUser._id}.png`;
-  const filePath = path.join(qrFolder, fileName);
-  fs.writeFileSync(filePath, qrPngBuffer);
-
-  newUser.qrCode = `/qr/${fileName}`;
-  await newUser.save();
+  // QR image will be added later via AWS
+  user.qrImageUrl = null;
+  await user.save();
 
   res.json({
     success: true,
-    user: newUser,
+    name: user.name,
+    phone: user.phone,
+    gender: user.gender,
+    aadhaarNumber: user.aadhaarNumber,
+    manualCode: user.manualCode,
+    gateStatus: user.gateStatus,
+    washroomStatus: user.washroomStatus,
     scanUrl,
-    manualCode,
-    qrPngUrl: `http://192.168.137.1:3000/qr/${fileName}`
+    qrImageUrl: user.qrImageUrl
   });
 });
 
@@ -86,7 +80,9 @@ app.get("/scan/:id", async (req, res) => {
   const { action } = req.query;
 
   const user = await User.findById(id);
-  if (!user) return res.status(404).json({ success: false, message: "User not found" });
+  if (!user) {
+    return res.status(404).json({ success: false, message: "User not found" });
+  }
 
   if (action === "gate") {
     user.gateStatus = user.gateStatus === "IN" ? "OUT" : "IN";
@@ -99,19 +95,19 @@ app.get("/scan/:id", async (req, res) => {
   }
 
   await user.save();
-  res.json({
-  success: true,
-  message: `${action === "gate" ? "Gate" : "Washroom"} scan successful`,
-  name: user.name,
-  phone: user.phone,
-  manualCode: user.manualCode,
-  gender: user.gender,
-  aadhaarNumber: user.aadhaarNumber,
-  gateStatus: user.gateStatus,
-  washroomStatus: user.washroomStatus,
-  time: new Date()
-});
 
+  res.json({
+    success: true,
+    message: `${action === "gate" ? "Gate" : "Washroom"} scan successful`,
+    name: user.name,
+    phone: user.phone,
+    manualCode: user.manualCode,
+    gender: user.gender,
+    aadhaarNumber: user.aadhaarNumber,
+    gateStatus: user.gateStatus,
+    washroomStatus: user.washroomStatus,
+    time: new Date()
+  });
 });
 
 /* ---------------- MANUAL CODE FALLBACK ---------------- */
@@ -119,7 +115,9 @@ app.get("/manual", async (req, res) => {
   const { code, action } = req.query;
 
   const user = await User.findOne({ manualCode: code });
-  if (!user) return res.status(404).json({ success: false, message: "Invalid manual code" });
+  if (!user) {
+    return res.status(404).json({ success: false, message: "Invalid manual code" });
+  }
 
   if (action === "gate") {
     user.gateStatus = user.gateStatus === "IN" ? "OUT" : "IN";
@@ -132,35 +130,35 @@ app.get("/manual", async (req, res) => {
   }
 
   await user.save();
-  res.json({ success: true, verifiedBy: "manual_code", user });
+
+  res.json({
+    success: true,
+    name: user.name,
+    phone: user.phone,
+    manualCode: user.manualCode,
+    gateStatus: user.gateStatus,
+    washroomStatus: user.washroomStatus
+  });
 });
 
-/* ---------------- ADMIN USERS VIEW ---------------- */
+/* ---------------- ADMIN USERS ---------------- */
 app.get("/users", async (req, res) => {
   const users = await User.find().sort({ _id: -1 });
   res.json(users);
 });
+
+/* ---------------- UPDATE USER ---------------- */
 app.post("/update", async (req, res) => {
-  const {
-    manualCode,
-    name,
-    phone,
-    gender,
-    aadhaarNumber,
-    gateStatus,
-    washroomStatus
-  } = req.body;
+  const user = await User.findOne({ manualCode: req.body.manualCode });
+  if (!user) {
+    return res.status(404).json({ success: false, message: "User not found" });
+  }
 
-  const user = await User.findOne({ manualCode });
-  if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-  // update only if value is provided
-  if (name) user.name = name;
-  if (phone) user.phone = phone;
-  if (gender) user.gender = gender;
-  if (aadhaarNumber) user.aadhaarNumber = aadhaarNumber;
-  if (gateStatus) user.gateStatus = gateStatus;
-  if (washroomStatus) user.washroomStatus = washroomStatus;
+  Object.keys(req.body).forEach(key => {
+    if (req.body[key] && key !== "manualCode") {
+      user[key] = req.body[key];
+    }
+  });
 
   await user.save();
 
@@ -171,8 +169,6 @@ app.post("/update", async (req, res) => {
   });
 });
 
-/* ----------- SERVE PNG QR FILES TO CLIENT ----------- */
-app.use("/qr", express.static("qr-codes"));
-
 /* ---------------- START SERVER ---------------- */
-app.listen(3000, () => console.log("Server running on port 3000"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Server running on", PORT));

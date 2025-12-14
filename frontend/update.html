@@ -43,70 +43,72 @@
 </div>
 
 <script>
-function updateUser() {
+  // 👉 REMOVE localhost before deployment:
+  // const API_BASE = "http://localhost:3000";
+  const API_BASE = "https://YOUR-RENDER-APP.onrender.com"; // <-- update this
 
-  const btn = document.getElementById("btn");
-  const loader = document.getElementById("loader");
-  const result = document.getElementById("result");
+  function updateUser() {
+    const btn = document.getElementById("btn");
+    const loader = document.getElementById("loader");
+    const result = document.getElementById("result");
 
-  const body = {
-    manualCode: document.getElementById("manual").value.trim(),
-    name: document.getElementById("name").value.trim(),
-    phone: document.getElementById("phone").value.trim(),
-    gender: document.getElementById("gender").value,
-    aadhaarNumber: document.getElementById("aadhaarNumber").value.trim(),
-    gateStatus: document.getElementById("gateStatus").value,
-    washroomStatus: document.getElementById("washroomStatus").value
-  };
+    const body = {
+      manualCode: document.getElementById("manual").value.trim(),
+      name: document.getElementById("name").value.trim(),
+      phone: document.getElementById("phone").value.trim(),
+      gender: document.getElementById("gender").value,
+      aadhaarNumber: document.getElementById("aadhaarNumber").value.trim(),
+      gateStatus: document.getElementById("gateStatus").value,
+      washroomStatus: document.getElementById("washroomStatus").value
+    };
 
-  if (!body.manualCode) {
-    alert("Manual Code is required");
-    return;
-  }
-
-  // remove empty properties
-  Object.keys(body).forEach(k => !body[k] && delete body[k]);
-
-  btn.disabled = true;
-  loader.style.display = "block";
-  result.innerHTML = "";
-
-  fetch("http://192.168.137.1:3000/update", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  })
-  .then(r => r.json())
-  .then(data => {
-    btn.disabled = false;
-    loader.style.display = "none";
-
-    if (!data.success) {
-      result.innerHTML = `<h3 style="color:red;">${data.message}</h3>`;
+    if (!body.manualCode) {
+      alert("Manual Code is required");
       return;
     }
 
-    const u = data.user;
-    result.innerHTML = `
-      <h3 style="color:green;">User Updated Successfully ✔</h3>
-      <b>Name:</b> ${u.name}<br>
-      <b>Phone:</b> ${u.phone}<br>
-      <b>Gender:</b> ${u.gender}<br>
-      <b>Aadhaar:</b> ${u.aadhaarNumber}<br>
-      <b>Manual Code:</b> ${u.manualCode}<br>
-      <b>Gate Status:</b> ${u.gateStatus}<br>
-      <b>Washroom Status:</b> ${u.washroomStatus}<br><br>
+    Object.keys(body).forEach(k => !body[k] && delete body[k]);
 
-      <button onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
-      <button onclick="window.location.href='scanner.html'" style="margin-left:10px;">Open Scanner</button>
-    `;
-  })
-  .catch(() => {
-    btn.disabled = false;
-    loader.style.display = "none";
-    alert("Connection failed. Server not reachable.");
-  });
-}
+    btn.disabled = true;
+    loader.style.display = "block";
+    result.innerHTML = "";
+
+    fetch(`${API_BASE}/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      loader.style.display = "none";
+
+      if (!data.success) {
+        result.innerHTML = `<h3 style="color:red;">${data.message}</h3>`;
+        return;
+      }
+
+      const u = data.user;
+      result.innerHTML = `
+        <h3 style="color:green;">User Updated Successfully ✔</h3>
+        <b>Name:</b> ${u.name}<br>
+        <b>Phone:</b> ${u.phone}<br>
+        <b>Gender:</b> ${u.gender}<br>
+        <b>Aadhaar:</b> ${u.aadhaarNumber}<br>
+        <b>Manual Code:</b> ${u.manualCode}<br>
+        <b>Gate:</b> ${u.gateStatus}<br>
+        <b>Washroom:</b> ${u.washroomStatus}<br><br>
+
+        <button onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
+        <button onclick="window.location.href='scan.html'" style="margin-left:10px;">Open Scanner</button>
+      `;
+    })
+    .catch(() => {
+      btn.disabled = false;
+      loader.style.display = "none";
+      alert("Connection failed. Server not reachable.");
+    });
+  }
 </script>
 
 </body>

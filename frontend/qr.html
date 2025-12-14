@@ -26,21 +26,24 @@
 </div>
 
 <script>
-    history.pushState(null, "", location.href);
-    window.onpopstate = () => history.go(1);
+  // Prevent Back Navigation
+  history.pushState(null, "", location.href);
+  window.onpopstate = () => history.go(1);
 
-const data = JSON.parse(localStorage.getItem("qrUser"));
+  // Get stored data
+  const data = JSON.parse(localStorage.getItem("qrUser"));
 
-if (!data) {
-  // ❗ DO NOT REDIRECT — just show button
-  document.getElementById("error").style.display = "block";
-} else {
-  document.getElementById("card").style.display = "block";
-  document.getElementById("qrImg").src = data.qrPngUrl;
-  document.getElementById("name").innerText = data.user.name;
-  document.getElementById("phone").innerText = data.user.phone;
-  document.getElementById("manual").innerText = data.manualCode;
-}
+  if (!data) {
+    document.getElementById("error").style.display = "block";
+  } else {
+    document.getElementById("card").style.display = "block";
+
+    // 👉 FIXED: PRODUCTION-SAFE FIELDS
+    document.getElementById("qrImg").src = data.qrImageUrl;   // S3 URL or backend URL
+    document.getElementById("name").innerText = data.name;
+    document.getElementById("phone").innerText = data.phone;
+    document.getElementById("manual").innerText = data.manualCode;
+  }
 </script>
 
 </body>

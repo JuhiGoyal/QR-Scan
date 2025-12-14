@@ -1,45 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <title>Dashboard</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <div class="container">
   <h1>Dashboard</h1>
   <div id="users"></div>
 </div>
 
 <script>
-function loadUsers() {
-  fetch("http://192.168.137.1:3000/users")
-  .then(r => r.json())
-  .then(data => {
-    users.innerHTML = data.map(u => `
-      <div class="card">
-        <h3>${u.name}</h3>
-        <p>${u.email}</p>
-        <p>${u.phone}</p>
-         <p>${u.manualCode}</p>
-        <p>Gate:
-          <span class="badge ${u.gateStatus === 'IN' ? 'green' : 'red'}">
-            ${u.gateStatus}
-          </span>
-        </p>
+  // 👉 REMOVE localhost before uploading:
+  // const API_BASE = "http://localhost:3000";
+  const API_BASE = "https://YOUR-RENDER-APP.onrender.com"; // <-- change this
 
-        <p>Washroom:
-          <span class="badge ${u.washroomStatus === 'IN' ? 'blue' : 'gray'}">
-            ${u.washroomStatus}
-          </span>
-        </p>
+  function loadUsers() {
+    fetch(`${API_BASE}/users`)
+      .then(r => r.json())
+      .then(data => {
+        users.innerHTML = data.map(u => `
+          <div class="card">
+            <h3>${u.name}</h3>
+            <p><b>Phone:</b> ${u.phone}</p>
+            <p><b>Gender:</b> ${u.gender}</p>
+            <p><b>Aadhaar:</b> ${u.aadhaarNumber}</p>
+            <p><b>Manual Code:</b> ${u.manualCode}</p>
 
-        <img src="http://192.168.137.1:3000${u.qrCode}" width="150">
-      </div>
-    `).join("");
-  });
-}
+            <p><b>Gate:</b>
+              <span class="badge ${u.gateStatus === 'IN' ? 'green' : 'red'}">
+                ${u.gateStatus}
+              </span>
+            </p>
 
-loadUsers();
-setInterval(loadUsers, 3000); // auto refresh
+            <p><b>Washroom:</b>
+              <span class="badge ${u.washroomStatus === 'IN' ? 'blue' : 'gray'}">
+                ${u.washroomStatus}
+              </span>
+            </p>
+
+            ${u.qrImageUrl ? `<img src="${u.qrImageUrl}" width="130">` : `<p>No QR Image</p>`}
+          </div>
+        `).join("");
+      })
+      .catch(err => {
+        console.log("Dashboard Load Error:", err);
+        users.innerHTML = `<h3 style="color:red;">Unable to load users</h3>`;
+      });
+  }
+
+  loadUsers();
+  setInterval(loadUsers, 3000);
 </script>
+
 </body>
 </html>
