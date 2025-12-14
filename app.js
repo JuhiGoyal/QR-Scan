@@ -57,7 +57,7 @@ app.post("/register", async (req, res) => {
 
   const scanUrl = `http://192.168.137.1:3000/scan/${newUser._id}`;
 
-  // Generate PNG QR
+  // Generate PNG QRgnore
   const qrPngBuffer = await QRCode.toBuffer(scanUrl);
 
   // Create folder if not exists
