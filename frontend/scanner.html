@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QR Scanner</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+
+<div class="container">
+  <h1>Scan QR</h1>
+
+  <div class="card">
+    <select id="scanType">
+      <option value="gate">Gate</option>
+      <option value="washroom">Washroom</option>
+    </select>
+
+    <div id="reader" style="width:330px; margin:auto; margin-top:20px;"></div>
+    <div id="result" style="margin-top:15px; font-size:18px;"></div>
+  </div>
+</div>
+
+<script>
+const qr = new Html5Qrcode("reader");
+
+function startScanner() {
+  qr.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    text => {
+      const action = document.getElementById("scanType").value;
+
+      fetch(`${text}?action=${action}`)
+        .then(r => r.json())
+        .then(res => {
+          if (!res.success) {
+            result.innerHTML = `<h2 style="color:red;">User not found ❌</h2>`;
+            return;
+          }
+
+          result.innerHTML = `
+            <h2 style="color:green;">${res.message} 🎉</h2>
+
+            <div style="margin-top:10px;">
+              <b>Name:</b> ${res.name}<br>
+              <b>Phone:</b> ${res.phone}<br>
+              <b>Manual Code:</b> ${res.manualCode || "N/A"}<br><br>
+
+              <b>Gate Status:</b>
+              <span style="color:${res.gateStatus === "IN" ? "green" : "red"}">${res.gateStatus}</span><br>
+
+              <b>Washroom Status:</b>
+              <span style="color:${res.washroomStatus === "IN" ? "blue" : "gray"}">${res.washroomStatus}</span><br><br>
+
+              <small>Updated at: ${new Date(res.time).toLocaleTimeString()}</small>
+            </div>
+          `;
+
+          qr.stop();
+
+          // restart scanner after 2 sec automatically
+          setTimeout(() => {
+            result.innerHTML = "";
+            startScanner();
+          }, 2000);
+        })
+        .catch(() => {
+          result.innerHTML = `<h2 style="color:red;">Scan failed. Try again.</h2>`;
+        });
+    }
+  );
+}
+
+// start camera scan
+startScanner();
+</script>
+
+</body>
+</html>

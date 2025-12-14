@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manual Verification</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <h1>Manual Verification</h1>
+
+  <div class="card">
+    <input id="code" placeholder="Enter Manual Code">
+    <select id="action">
+      <option value="gate">Gate</option>
+      <option value="washroom">Washroom</option>
+    </select>
+
+    <button onclick="submitNow()">Submit</button>
+    <div id="result" style="margin-top:15px; font-size:18px;"></div>
+  </div>
+</div>
+
+<script>
+function submitNow() {
+  const manualCode = document.getElementById("code").value.trim();
+  const action = document.getElementById("action").value;
+
+  if (!manualCode) {
+    alert("Manual code required");
+    return;
+  }
+
+  fetch(`http://192.168.137.1:3000/manual?code=${manualCode}&action=${action}`)
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) {
+        result.innerHTML = `<h2 style="color:red;">${res.message} ❌</h2>`;
+        return;
+      }
+
+      const u = res.user;
+      result.innerHTML = `
+        <h2 style="color:green;">${action === "gate" ? "Gate" : "Washroom"} Updated ✔</h2>
+
+        <b>Name:</b> ${u.name}<br>
+        <b>Phone:</b> ${u.phone}<br>
+        <b>Manual Code:</b> ${u.manualCode}<br><br>
+
+        <b>Gate Status:</b>
+        <span style="color:${u.gateStatus === "IN" ? "green" : "red"}">${u.gateStatus}</span><br>
+
+        <b>Washroom Status:</b>
+        <span style="color:${u.washroomStatus === "IN" ? "blue" : "gray"}">${u.washroomStatus}</span><br><br>
+
+        <small>Updated just now</small>
+      `;
+    })
+    .catch(() => {
+      result.innerHTML = `<h2 style="color:red;">Request Failed ❌</h2>`;
+    });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <h1>Dashboard</h1>
+  <div id="users"></div>
+</div>
+
+<script>
+function loadUsers() {
+  fetch("http://192.168.137.1:3000/users")
+  .then(r => r.json())
+  .then(data => {
+    users.innerHTML = data.map(u => `
+      <div class="card">
+        <h3>${u.name}</h3>
+        <p>${u.email}</p>
+        <p>${u.phone}</p>
+         <p>${u.manualCode}</p>
+        <p>Gate:
+          <span class="badge ${u.gateStatus === 'IN' ? 'green' : 'red'}">
+            ${u.gateStatus}
+          </span>
+        </p>
+
+        <p>Washroom:
+          <span class="badge ${u.washroomStatus === 'IN' ? 'blue' : 'gray'}">
+            ${u.washroomStatus}
+          </span>
+        </p>
+
+        <img src="http://192.168.137.1:3000${u.qrCode}" width="150">
+      </div>
+    `).join("");
+  });
+}
+
+loadUsers();
+setInterval(loadUsers, 3000); // auto refresh
+</script>
+</body>
+</html>

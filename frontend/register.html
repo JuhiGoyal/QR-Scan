@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Register User</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <h1>User Registration</h1>
+
+  <div class="card">
+    <input id="name" placeholder="Full Name" required>
+    <input id="phone" placeholder="Phone Number" required>
+
+    <select id="gender" required>
+      <option value="">Select Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <input id="aadhaarNumber" placeholder="Aadhaar Number" required>
+
+    <button id="btn" type="button" onclick="registerUser()">Register</button>
+
+    <div id="loader" style="display:none; margin-top:10px;">⏳ Registering...</div>
+    <div id="result" style="margin-top:15px;"></div>
+  </div>
+</div>
+
+<script>
+function registerUser() {
+  const btn = document.getElementById("btn");
+  const loader = document.getElementById("loader");
+  const result = document.getElementById("result");
+
+  const body = {
+    name: document.getElementById("name").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    gender: document.getElementById("gender").value,
+    aadhaarNumber: document.getElementById("aadhaarNumber").value.trim()
+  };
+
+  if (!body.name || !body.phone || !body.gender || !body.aadhaarNumber) {
+    alert("All fields are required");
+    return;
+  }
+
+  btn.disabled = true;
+  loader.style.display = "block";
+  result.innerHTML = "";
+
+  fetch("http://192.168.137.1:3000/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled = false;
+    loader.style.display = "none";
+
+    if (!data.success) {
+      result.innerHTML = `<h3 style="color:red;">Registration failed ❌</h3>`;
+      return;
+    }
+
+    // Save the user & QR info so qr.html can show it
+    localStorage.setItem("qrUser", JSON.stringify(data));
+
+    result.innerHTML = `<h3 style="color:green;">Redirecting...</h3>`;
+
+    // Small delay ensures redirect works on all browsers
+    setTimeout(() => {
+      window.location.href = "qr.html";
+    }, 300);
+  })
+  .catch(err => {
+    console.log(err);
+    btn.disabled = false;
+    loader.style.display = "none";
+    alert("Registration failed. Server unreachable.");
+  });
+}
+</script>
+
+</body>
+</html>

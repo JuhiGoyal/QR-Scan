@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>User QR Code</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <h1>QR Generated</h1>
+
+  <div class="card" id="card" style="display:none;">
+    <img id="qrImg" width="260" style="border:2px solid #1e4db7; border-radius:10px;"><br><br>
+
+    <p><b>Name:</b> <span id="name"></span></p>
+    <p><b>Phone:</b> <span id="phone"></span></p>
+    <p><b>Manual Code:</b> <span id="manual" style="font-size:22px; color:#bf0000;"></span></p>
+
+    <button onclick="window.location.href='register.html'">Register Another User</button>
+  </div>
+
+  <div id="error" style="display:none;">
+    <h3 style="color:red;">❌ No QR data found</h3>
+    <button onclick="window.location.href='register.html'">Go to Registration</button>
+  </div>
+</div>
+
+<script>
+    history.pushState(null, "", location.href);
+    window.onpopstate = () => history.go(1);
+
+const data = JSON.parse(localStorage.getItem("qrUser"));
+
+if (!data) {
+  // ❗ DO NOT REDIRECT — just show button
+  document.getElementById("error").style.display = "block";
+} else {
+  document.getElementById("card").style.display = "block";
+  document.getElementById("qrImg").src = data.qrPngUrl;
+  document.getElementById("name").innerText = data.user.name;
+  document.getElementById("phone").innerText = data.user.phone;
+  document.getElementById("manual").innerText = data.manualCode;
+}
+</script>
+
+</body>
+</html>
