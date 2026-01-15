@@ -3,11 +3,21 @@ const QRCode = require("qrcode");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const AWS = require("aws-sdk"); // ✅ ADDED
 require("dotenv").config();
 
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
+
+/* ---------------- AWS CONFIG ---------------- */
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION
+});
+
+const s3 = new AWS.S3();
 
 /* ---------------- MONGODB CONNECTION ---------------- */
 mongoose
@@ -29,49 +39,69 @@ const userSchema = new mongoose.Schema({
   lastGateUpdate: Date,
   lastWashroomUpdate: Date,
 
-  qrImageUrl: String   // will be filled after AWS
+  qrImageUrl: String
 });
 
 const User = mongoose.model("User", userSchema);
 
 /* ---------------- REGISTER USER ---------------- */
 app.post("/register", async (req, res) => {
-  const { name, phone, gender, aadhaarNumber } = req.body;
+  try {
+    const { name, phone, gender, aadhaarNumber } = req.body;
 
-  if (!name || !phone || !gender || !aadhaarNumber) {
-    return res.json({ success: false, message: "All fields required" });
+    if (!name || !phone || !gender || !aadhaarNumber) {
+      return res.json({ success: false, message: "All fields required" });
+    }
+
+    const manualCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const user = new User({
+      name,
+      phone,
+      gender,
+      aadhaarNumber,
+      manualCode
+    });
+
+    await user.save();
+
+    const scanUrl = `${process.env.BASE_URL}/scan/${user._id}`;
+
+    /* --------- GENERATE QR BUFFER --------- */
+    const qrBuffer = await QRCode.toBuffer(scanUrl);
+
+    /* --------- UPLOAD TO S3 --------- */
+    const key = `qr/${user._id}.png`;
+
+    await s3.putObject({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: key,
+      Body: qrBuffer,
+      ContentType: "image/png"
+    }).promise();
+
+    const qrImageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+    user.qrImageUrl = qrImageUrl;
+    await user.save();
+
+    res.json({
+      success: true,
+      name: user.name,
+      phone: user.phone,
+      gender: user.gender,
+      aadhaarNumber: user.aadhaarNumber,
+      manualCode: user.manualCode,
+      gateStatus: user.gateStatus,
+      washroomStatus: user.washroomStatus,
+      scanUrl,
+      qrImageUrl: user.qrImageUrl
+    });
+
+  } catch (err) {
+    console.error("Register Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-
-  const manualCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-  const user = new User({
-    name,
-    phone,
-    gender,
-    aadhaarNumber,
-    manualCode
-  });
-
-  await user.save();
-
-  const scanUrl = `${process.env.BASE_URL}/scan/${user._id}`;
-
-  // QR image will be added later via AWS
-  user.qrImageUrl = null;
-  await user.save();
-
-  res.json({
-    success: true,
-    name: user.name,
-    phone: user.phone,
-    gender: user.gender,
-    aadhaarNumber: user.aadhaarNumber,
-    manualCode: user.manualCode,
-    gateStatus: user.gateStatus,
-    washroomStatus: user.washroomStatus,
-    scanUrl,
-    qrImageUrl: user.qrImageUrl
-  });
 });
 
 /* ---------------- UNIVERSAL QR SCAN ---------------- */
