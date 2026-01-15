@@ -205,9 +205,16 @@ app.get("/manual", async (req, res) => {
     name: user.name,
     phone: user.phone,
     manualCode: user.manualCode,
+    gender: user.gender,
+    aadhaarNumber: user.aadhaarNumber,
+    address: user.address,
+    carVoucherNumber: user.carVoucherNumber,
+    carNumber: user.carNumber,
+    zone: user.zone,
     gateStatus: user.gateStatus,
     washroomStatus: user.washroomStatus
   });
+  
 });
 
 /* ---------------- ADMIN USERS ---------------- */
