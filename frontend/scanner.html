@@ -11,24 +11,50 @@
   <h1>Scan QR</h1>
 
   <div class="card">
-    <select id="scanType">
-      <option value="gate">Gate</option>
-      <option value="washroom">Washroom</option>
-    </select>
 
-    <div id="reader" style="width:330px; margin:auto; margin-top:20px;"></div>
-    <div id="result" style="margin-top:15px; font-size:18px;"></div>
+    <!-- ✅ LOGIN SECTION -->
+    <div id="loginBox" style="margin-bottom:15px;">
+      <h3 style="margin:0 0 10px 0;">Scanner Login</h3>
+      <input id="scannerPassword" type="password" placeholder="Enter Scanner Password" />
+      <button id="loginBtn" type="button" style="margin-top:10px;">Login</button>
+      <div id="loginMsg" style="margin-top:10px;"></div>
+    </div>
 
-    <!-- ✅ Scan Next Button -->
-    <button id="scanNextBtn" type="button" style="display:none; margin-top:15px;">
-      Scan Next
-    </button>
+    <!-- ✅ SCAN SECTION -->
+    <div id="scanBox" style="display:none;">
+      <select id="scanType">
+        <option value="gate">Gate</option>
+        <option value="washroom">Washroom</option>
+      </select>
+
+      <div id="reader" style="width:330px; margin:auto; margin-top:20px;"></div>
+      <div id="result" style="margin-top:15px; font-size:18px;"></div>
+
+      <!-- ✅ Scan Next Button -->
+      <button id="scanNextBtn" type="button" style="display:none; margin-top:15px;">
+        Scan Next
+      </button>
+
+      <!-- ✅ Logout -->
+      <button id="logoutBtn" type="button" style="margin-top:15px; margin-left:10px;">
+        Logout
+      </button>
+    </div>
+
   </div>
 </div>
 
 <script>
+  // ✅ BACKEND BASE
+  const API_BASE = "https://qr-backend-5qot.onrender.com";
+ 
+  const loginBox = document.getElementById("loginBox");
+  const scanBox = document.getElementById("scanBox");
+  const loginMsg = document.getElementById("loginMsg");
   const result = document.getElementById("result");
   const scanNextBtn = document.getElementById("scanNextBtn");
+
+  const TOKEN_KEY = "scannerToken";
 
   const qr = new Html5Qrcode("reader");
   let isProcessing = false;
@@ -45,6 +71,74 @@
     scanNextBtn.style.display = "none";
   }
 
+  function getToken() {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  function setToken(token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
+
+  function clearToken() {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+
+  function showLogin() {
+    loginBox.style.display = "block";
+    scanBox.style.display = "none";
+  }
+
+  function showScanner() {
+    loginBox.style.display = "none";
+    scanBox.style.display = "block";
+  }
+
+  // ✅ Login
+  document.getElementById("loginBtn").addEventListener("click", async () => {
+    const password = document.getElementById("scannerPassword").value.trim();
+
+    if (!password) {
+      loginMsg.innerHTML = `<span style="color:red;">Password required</span>`;
+      return;
+    }
+
+    loginMsg.innerHTML = "⏳ Logging in...";
+
+    try {
+      const r = await fetch(`${API_BASE}/scanner-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password })
+      });
+
+      const data = await r.json();
+
+      if (!data.success) {
+        loginMsg.innerHTML = `<span style="color:red;">${safe(data.message)} ❌</span>`;
+        return;
+      }
+
+      setToken(data.token);
+      loginMsg.innerHTML = `<span style="color:green;">Login success ✅</span>`;
+
+      showScanner();
+      startScanner();
+
+    } catch (e) {
+      loginMsg.innerHTML = `<span style="color:red;">Login failed ❌</span>`;
+    }
+  });
+
+  // ✅ Logout
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    clearToken();
+    result.innerHTML = "";
+    hideScanNextButton();
+
+    try { qr.stop(); } catch(e) {}
+    showLogin();
+  });
+
   function resetAndScanNext() {
     isProcessing = false;
     result.innerHTML = "";
@@ -54,7 +148,14 @@
 
   scanNextBtn.addEventListener("click", resetAndScanNext);
 
+  // ✅ Start scanner
   function startScanner() {
+    const token = getToken();
+    if (!token) {
+      showLogin();
+      return;
+    }
+
     qr.start(
       { facingMode: "environment" },
       { fps: 10, qrbox: 250 },
@@ -64,9 +165,22 @@
 
         const action = document.getElementById("scanType").value;
 
-        fetch(`${qrText}?action=${action}`)
+        // ✅ call protected scan API using token
+        fetch(`${qrText}?action=${action}`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        })
           .then(r => r.json())
           .then(res => {
+            // ✅ if token expired / invalid
+            if (res.message && (res.message.includes("Invalid/Expired") || res.message.includes("login required"))) {
+              clearToken();
+              result.innerHTML = `<h2 style="color:red;">Session expired. Login again ❌</h2>`;
+              showLogin();
+              return;
+            }
+
             if (!res.success) {
               result.innerHTML = `<h2 style="color:red;">${safe(res.message)} ❌</h2>`;
               showScanNextButton();
@@ -87,7 +201,10 @@
                 <b>Address:</b> ${safe(res.address)}<br>
                 <b>Car Voucher No:</b> ${safe(res.carVoucherNumber)}<br>
                 <b>Car Number:</b> ${safe(res.carNumber)}<br>
-                <b>Zone:</b> ${res.zone ? res.zone : "<span style='color:gray;'>Not Set</span>"}<br>
+
+                <b>Zone Day 1:</b> ${res.zoneDay1 ? res.zoneDay1 : "<span style='color:gray;'>Not Set</span>"}<br>
+                <b>Zone Day 2:</b> ${res.zoneDay2 ? res.zoneDay2 : "<span style='color:gray;'>Not Set</span>"}<br>
+                <b>Referred By:</b> ${safe(res.referredBy)}<br>
 
                 <br>
 
@@ -101,7 +218,6 @@
               </div>
             `;
 
-            // ✅ result stays, show Scan Next
             showScanNextButton();
           })
           .catch(() => {
@@ -116,7 +232,13 @@
     );
   }
 
-  startScanner();
+  // ✅ Auto start: if token already exists, scanner starts directly
+  if (getToken()) {
+    showScanner();
+    startScanner();
+  } else {
+    showLogin();
+  }
 </script>
 
 </body>

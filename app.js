@@ -4,6 +4,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const AWS = require("aws-sdk"); // ✅ ADDED
+const jwt = require("jsonwebtoken"); // ✅ ADDED
 require("dotenv").config();
 
 const app = express();
@@ -53,6 +54,60 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
+/* ---------------- HELPER: Event Day Check ---------------- */
+function isEventDay() {
+  const eventDate = process.env.EVENT_DATE; // YYYY-MM-DD
+  if (!eventDate) return true; // if not set then allow
+
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const today = `${yyyy}-${mm}-${dd}`;
+
+  return today === eventDate;
+}
+
+/* ---------------- AUTH: Scanner Login ---------------- */
+app.post("/scanner-login", (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password || password !== process.env.SCANNER_PASSWORD) {
+      return res.status(401).json({ success: false, message: "Invalid password" });
+    }
+
+    const token = jwt.sign(
+      { role: "scanner" },
+      process.env.JWT_SECRET,
+      { expiresIn: "12h" } // ✅ works for full event day
+    );
+
+    res.json({ success: true, token });
+  } catch (err) {
+    console.log("Login Error:", err);
+    res.status(500).json({ success: false, message: "Login error" });
+  }
+});
+
+/* ---------------- AUTH MIDDLEWARE ---------------- */
+function verifyScannerToken(req, res, next) {
+  try {
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.substring(7) : null;
+
+    if (!token) {
+      return res.status(401).json({ success: false, message: "Scanner login required" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.scanner = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: "Invalid/Expired token" });
+  }
+}
+
 /* ---------------- HELPER: Day1 -> Day2 zone mapping ---------------- */
 function mapDay1ToDay2Suffix(ch) {
   const map = { U: "O", V: "P", W: "Q", X: "R", Y: "S", Z: "T" };
@@ -94,7 +149,7 @@ app.post("/register", async (req, res) => {
       referredBy
     } = req.body;
 
-    // ✅ No field mandatory now (removed required validation)
+    // ✅ No field mandatory now
 
     // ✅ referredBy validation (1-21) only if provided
     let referredByValue = null;
@@ -112,7 +167,6 @@ app.post("/register", async (req, res) => {
     if (zoneDay1 && typeof zoneDay1 === "string") {
       zoneDay1Value = zoneDay1.trim().toUpperCase();
 
-      // if provided, format must be correct
       const computed = computeZoneDay2(zoneDay1Value);
       if (!computed) {
         return res.json({ success: false, message: "Invalid zoneDay1 (Example: AMW / AFZ)" });
@@ -188,10 +242,15 @@ app.post("/register", async (req, res) => {
   }
 });
 
-/* ---------------- UNIVERSAL QR SCAN ---------------- */
-app.get("/scan/:id", async (req, res) => {
+/* ---------------- UNIVERSAL QR SCAN (PROTECTED) ---------------- */
+app.get("/scan/:id", verifyScannerToken, async (req, res) => {
   const { id } = req.params;
   const { action } = req.query;
+
+  // ✅ Only allow on EVENT DAY
+  if (!isEventDay()) {
+    return res.json({ success: false, message: "QR scanning will be active only on event day" });
+  }
 
   const user = await User.findById(id);
   if (!user) {
