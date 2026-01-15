@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema({
   carNumber: String,
   zone: { type: String, default: "" },
 
-  // ✅ NEW FIELDS (only these added)
+  // ✅ NEW FIELDS
   zoneDay1: { type: String, default: "" },
   zoneDay2: { type: String, default: "" },
   referredBy: { type: Number, default: null },
@@ -52,6 +52,29 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model("User", userSchema);
+
+/* ---------------- HELPER: Day1 -> Day2 zone mapping ---------------- */
+function mapDay1ToDay2Suffix(ch) {
+  const map = { U: "O", V: "P", W: "Q", X: "R", Y: "S", Z: "T" };
+  return map[ch] || "";
+}
+
+function computeZoneDay2(zoneDay1) {
+  if (!zoneDay1 || typeof zoneDay1 !== "string") return "";
+
+  const zoneDay1Value = zoneDay1.trim().toUpperCase();
+
+  if (
+    zoneDay1Value.length === 3 &&
+    zoneDay1Value[0] === "A" &&
+    (zoneDay1Value[1] === "M" || zoneDay1Value[1] === "F")
+  ) {
+    const day2Suffix = mapDay1ToDay2Suffix(zoneDay1Value[2]);
+    if (!day2Suffix) return "";
+    return `B${zoneDay1Value[1]}${day2Suffix}`;
+  }
+  return "";
+}
 
 /* ---------------- REGISTER USER ---------------- */
 app.post("/register", async (req, res) => {
@@ -71,11 +94,9 @@ app.post("/register", async (req, res) => {
       referredBy
     } = req.body;
 
-    if (!name || !phone || !gender || !aadhaarNumber) {
-      return res.json({ success: false, message: "All fields required" });
-    }
+    // ✅ No field mandatory now (removed required validation)
 
-    // ✅ referredBy validation (1-21)
+    // ✅ referredBy validation (1-21) only if provided
     let referredByValue = null;
     if (referredBy !== undefined && referredBy !== null && referredBy !== "") {
       const num = Number(referredBy);
@@ -85,31 +106,18 @@ app.post("/register", async (req, res) => {
       referredByValue = num;
     }
 
-    // ✅ Day1 -> Day2 zone mapping
-    function mapDay1ToDay2Suffix(ch) {
-      const map = { U: "O", V: "P", W: "Q", X: "R", Y: "S", Z: "T" };
-      return map[ch] || "";
-    }
-
     let zoneDay1Value = "";
     let zoneDay2Value = "";
 
     if (zoneDay1 && typeof zoneDay1 === "string") {
       zoneDay1Value = zoneDay1.trim().toUpperCase();
 
-      if (
-        zoneDay1Value.length === 3 &&
-        zoneDay1Value[0] === "A" &&
-        (zoneDay1Value[1] === "M" || zoneDay1Value[1] === "F")
-      ) {
-        const day2Suffix = mapDay1ToDay2Suffix(zoneDay1Value[2]);
-        if (!day2Suffix) {
-          return res.json({ success: false, message: "Invalid zoneDay1 suffix (Allowed: U,V,W,X,Y,Z)" });
-        }
-        zoneDay2Value = `B${zoneDay1Value[1]}${day2Suffix}`;
-      } else {
-        return res.json({ success: false, message: "Invalid zoneDay1 format (Example: AMW / AFZ)" });
+      // if provided, format must be correct
+      const computed = computeZoneDay2(zoneDay1Value);
+      if (!computed) {
+        return res.json({ success: false, message: "Invalid zoneDay1 (Example: AMW / AFZ)" });
       }
+      zoneDay2Value = computed;
     }
 
     const manualCode = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -125,7 +133,6 @@ app.post("/register", async (req, res) => {
       carNumber,
       zone,
 
-      // ✅ NEW SAVE
       zoneDay1: zoneDay1Value,
       zoneDay2: zoneDay2Value,
       referredBy: referredByValue
@@ -164,7 +171,6 @@ app.post("/register", async (req, res) => {
       carNumber: user.carNumber,
       zone: user.zone,
 
-      // ✅ NEW RESPONSE FIELDS
       zoneDay1: user.zoneDay1,
       zoneDay2: user.zoneDay2,
       referredBy: user.referredBy,
@@ -217,7 +223,6 @@ app.get("/scan/:id", async (req, res) => {
     carNumber: user.carNumber,
     zone: user.zone,
 
-    // ✅ NEW (optional show)
     zoneDay1: user.zoneDay1,
     zoneDay2: user.zoneDay2,
     referredBy: user.referredBy,
@@ -238,7 +243,7 @@ async function downloadQR(qrUrl, fileName) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${fileName}.png`;  // ✅ manualCode as filename
+    a.download = `${fileName}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -283,7 +288,6 @@ app.get("/manual", async (req, res) => {
     carNumber: user.carNumber,
     zone: user.zone,
 
-    // ✅ NEW (optional show)
     zoneDay1: user.zoneDay1,
     zoneDay2: user.zoneDay2,
     referredBy: user.referredBy,
@@ -305,6 +309,28 @@ app.post("/update", async (req, res) => {
   const user = await User.findOne({ manualCode: req.body.manualCode });
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
+  }
+
+  // ✅ If zoneDay1 is being updated, auto set zoneDay2
+  if (req.body.zoneDay1 && typeof req.body.zoneDay1 === "string") {
+    const z1 = req.body.zoneDay1.trim().toUpperCase();
+    const z2 = computeZoneDay2(z1);
+
+    if (!z2) {
+      return res.json({ success: false, message: "Invalid zoneDay1 (Example: AMW / AFZ)" });
+    }
+
+    req.body.zoneDay1 = z1;
+    req.body.zoneDay2 = z2;
+  }
+
+  // ✅ referredBy validation in update also (only if present)
+  if (req.body.referredBy !== undefined && req.body.referredBy !== null && req.body.referredBy !== "") {
+    const num = Number(req.body.referredBy);
+    if (!Number.isInteger(num) || num < 1 || num > 21) {
+      return res.json({ success: false, message: "referredBy must be a number between 1 to 21" });
+    }
+    req.body.referredBy = num;
   }
 
   Object.keys(req.body).forEach(key => {

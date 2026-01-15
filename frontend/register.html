@@ -160,22 +160,11 @@ function registerUser() {
     carVoucherNumber: document.getElementById("carVoucherNumber").value.trim(),
     carNumber: document.getElementById("carNumber").value.trim(),
 
-    // ✅ NEW
     referredBy: document.getElementById("referredBy").value.trim(),
     zoneDay1: zoneDay1
   };
 
-  // ✅ Required fields validation
-  if (!body.name || !body.phone || !body.gender || !body.aadhaarNumber || !body.address || !body.carVoucherNumber || !body.carNumber) {
-    alert("Please fill all required fields");
-    return;
-  }
-
-  // ✅ zone required
-  if (!body.zoneDay1) {
-    alert("Please select Zone Day 1 properly");
-    return;
-  }
+  // ✅ NO MANDATORY FIELD VALIDATION NOW
 
   btn.disabled = true;
   loader.style.display = "block";
@@ -192,14 +181,11 @@ function registerUser() {
     loader.style.display = "none";
 
     if (!data.success) {
-      result.innerHTML = `<h3 style="color:red;">Registration failed</h3>`;
+      result.innerHTML = `<h3 style="color:red;">${data.message ? data.message : "Registration failed"}</h3>`;
       return;
     }
 
-    // Save entire response for qr.html
     localStorage.setItem("qrUser", JSON.stringify(data));
-
-    // Redirect to QR page
     window.location.href = "qr.html";
   })
   .catch(err => {
