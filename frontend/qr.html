@@ -20,7 +20,11 @@
     <p><b>Address:</b> <span id="address"></span></p>
     <p><b>Car Voucher No:</b> <span id="carVoucherNumber"></span></p>
     <p><b>Car Number:</b> <span id="carNumber"></span></p>
-    <p><b>Zone:</b> <span id="zone"></span></p>
+
+    <!-- ✅ UPDATED ZONES + REFERRED BY -->
+    <p><b>Zone Day 1:</b> <span id="zoneDay1"></span></p>
+    <p><b>Zone Day 2:</b> <span id="zoneDay2"></span></p>
+    <p><b>Referred By:</b> <span id="referredBy"></span></p>
 
     <p><b>Manual Code:</b> <span id="manual" style="font-size:22px; color:#bf0000;"></span></p>
 
@@ -97,7 +101,11 @@
     document.getElementById("address").innerText = safe(data.address);
     document.getElementById("carVoucherNumber").innerText = safe(data.carVoucherNumber);
     document.getElementById("carNumber").innerText = safe(data.carNumber);
-    document.getElementById("zone").innerHTML = data.zone ? data.zone : "<span style='color:gray;'>Not Set</span>";
+
+    // ✅ UPDATED: zones + referredBy
+    document.getElementById("zoneDay1").innerHTML = data.zoneDay1 ? data.zoneDay1 : "<span style='color:gray;'>Not Set</span>";
+    document.getElementById("zoneDay2").innerHTML = data.zoneDay2 ? data.zoneDay2 : "<span style='color:gray;'>Not Set</span>";
+    document.getElementById("referredBy").innerText = safe(data.referredBy);
 
     document.getElementById("manual").innerText = safe(data.manualCode);
 

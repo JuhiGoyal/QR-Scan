@@ -18,18 +18,41 @@
 
     <div id="reader" style="width:330px; margin:auto; margin-top:20px;"></div>
     <div id="result" style="margin-top:15px; font-size:18px;"></div>
+
+    <!-- ✅ Scan Next Button -->
+    <button id="scanNextBtn" type="button" style="display:none; margin-top:15px;">
+      Scan Next
+    </button>
   </div>
 </div>
 
 <script>
   const result = document.getElementById("result");
-  const qr = new Html5Qrcode("reader");
+  const scanNextBtn = document.getElementById("scanNextBtn");
 
+  const qr = new Html5Qrcode("reader");
   let isProcessing = false;
 
   function safe(v) {
     return (v === undefined || v === null || v === "") ? "-" : v;
   }
+
+  function showScanNextButton() {
+    scanNextBtn.style.display = "inline-block";
+  }
+
+  function hideScanNextButton() {
+    scanNextBtn.style.display = "none";
+  }
+
+  function resetAndScanNext() {
+    isProcessing = false;
+    result.innerHTML = "";
+    hideScanNextButton();
+    startScanner();
+  }
+
+  scanNextBtn.addEventListener("click", resetAndScanNext);
 
   function startScanner() {
     qr.start(
@@ -46,6 +69,7 @@
           .then(res => {
             if (!res.success) {
               result.innerHTML = `<h2 style="color:red;">${safe(res.message)} ❌</h2>`;
+              showScanNextButton();
               return;
             }
 
@@ -60,7 +84,6 @@
 
                 <br>
 
-                <!-- ✅ NEW fields -->
                 <b>Address:</b> ${safe(res.address)}<br>
                 <b>Car Voucher No:</b> ${safe(res.carVoucherNumber)}<br>
                 <b>Car Number:</b> ${safe(res.carNumber)}<br>
@@ -77,17 +100,17 @@
                 <small>Updated at: ${new Date(res.time).toLocaleTimeString()}</small>
               </div>
             `;
+
+            // ✅ result stays, show Scan Next
+            showScanNextButton();
           })
           .catch(() => {
             result.innerHTML = `<h2 style="color:red;">Scan failed ❌</h2>`;
+            showScanNextButton();
           })
           .finally(() => {
+            // ✅ Stop scanner and WAIT for user to click "Scan Next"
             qr.stop();
-            setTimeout(() => {
-              isProcessing = false;
-              result.innerHTML = "";
-              startScanner();
-            }, 2000);
           });
       }
     );

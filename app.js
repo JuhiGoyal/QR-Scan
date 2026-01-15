@@ -37,6 +37,11 @@ const userSchema = new mongoose.Schema({
   carNumber: String,
   zone: { type: String, default: "" },
 
+  // ✅ NEW FIELDS (only these added)
+  zoneDay1: { type: String, default: "" },
+  zoneDay2: { type: String, default: "" },
+  referredBy: { type: Number, default: null },
+
   gateStatus: { type: String, default: "OUT" },
   washroomStatus: { type: String, default: "OUT" },
 
@@ -51,13 +56,60 @@ const User = mongoose.model("User", userSchema);
 /* ---------------- REGISTER USER ---------------- */
 app.post("/register", async (req, res) => {
   try {
-    const { name, phone, gender, aadhaarNumber,address,
+    const {
+      name,
+      phone,
+      gender,
+      aadhaarNumber,
+      address,
       carVoucherNumber,
       carNumber,
-      zone } = req.body;
+      zone,
+
+      // ✅ NEW INPUTS
+      zoneDay1,
+      referredBy
+    } = req.body;
 
     if (!name || !phone || !gender || !aadhaarNumber) {
       return res.json({ success: false, message: "All fields required" });
+    }
+
+    // ✅ referredBy validation (1-21)
+    let referredByValue = null;
+    if (referredBy !== undefined && referredBy !== null && referredBy !== "") {
+      const num = Number(referredBy);
+      if (!Number.isInteger(num) || num < 1 || num > 21) {
+        return res.json({ success: false, message: "referredBy must be a number between 1 to 21" });
+      }
+      referredByValue = num;
+    }
+
+    // ✅ Day1 -> Day2 zone mapping
+    function mapDay1ToDay2Suffix(ch) {
+      const map = { U: "O", V: "P", W: "Q", X: "R", Y: "S", Z: "T" };
+      return map[ch] || "";
+    }
+
+    let zoneDay1Value = "";
+    let zoneDay2Value = "";
+
+    if (zoneDay1 && typeof zoneDay1 === "string") {
+      zoneDay1Value = zoneDay1.trim().toUpperCase();
+
+      if (
+        zoneDay1Value.length === 3 &&
+        zoneDay1Value[0] === "A" &&
+        (zoneDay1Value[1] === "M" || zoneDay1Value[1] === "F")
+      ) {
+        const day2Suffix = mapDay1ToDay2Suffix(zoneDay1Value[2]);
+        if (!day2Suffix) {
+          return res.json({ success: false, message: "Invalid zoneDay1 suffix (Allowed: U,V,W,X,Y,Z)" });
+        }
+        zoneDay2Value = `B${zoneDay1Value[1]}${day2Suffix}`;
+      } else {
+        return res.json({ success: false, message: "Invalid zoneDay1 format (Example: AMW / AFZ)" });
+      }
     }
 
     const manualCode = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -67,10 +119,16 @@ app.post("/register", async (req, res) => {
       phone,
       gender,
       aadhaarNumber,
-      manualCode, address,
+      manualCode,
+      address,
       carVoucherNumber,
       carNumber,
-      zone
+      zone,
+
+      // ✅ NEW SAVE
+      zoneDay1: zoneDay1Value,
+      zoneDay2: zoneDay2Value,
+      referredBy: referredByValue
     });
 
     await user.save();
@@ -105,6 +163,12 @@ app.post("/register", async (req, res) => {
       carVoucherNumber: user.carVoucherNumber,
       carNumber: user.carNumber,
       zone: user.zone,
+
+      // ✅ NEW RESPONSE FIELDS
+      zoneDay1: user.zoneDay1,
+      zoneDay2: user.zoneDay2,
+      referredBy: user.referredBy,
+
       manualCode: user.manualCode,
       gateStatus: user.gateStatus,
       washroomStatus: user.washroomStatus,
@@ -152,11 +216,18 @@ app.get("/scan/:id", async (req, res) => {
     carVoucherNumber: user.carVoucherNumber,
     carNumber: user.carNumber,
     zone: user.zone,
+
+    // ✅ NEW (optional show)
+    zoneDay1: user.zoneDay1,
+    zoneDay2: user.zoneDay2,
+    referredBy: user.referredBy,
+
     gateStatus: user.gateStatus,
     washroomStatus: user.washroomStatus,
     time: new Date()
   });
 });
+
 async function downloadQR(qrUrl, fileName) {
   try {
     const response = await fetch(qrUrl);
@@ -211,10 +282,16 @@ app.get("/manual", async (req, res) => {
     carVoucherNumber: user.carVoucherNumber,
     carNumber: user.carNumber,
     zone: user.zone,
+
+    // ✅ NEW (optional show)
+    zoneDay1: user.zoneDay1,
+    zoneDay2: user.zoneDay2,
+    referredBy: user.referredBy,
+
     gateStatus: user.gateStatus,
     washroomStatus: user.washroomStatus
   });
-  
+
 });
 
 /* ---------------- ADMIN USERS ---------------- */

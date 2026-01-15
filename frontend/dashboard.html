@@ -36,7 +36,17 @@
             <p><b>Car Voucher No:</b> ${safe(u.carVoucherNumber)}</p>
             <p><b>Car Number:</b> ${safe(u.carNumber)}</p>
 
-            <p><b>Zone:</b> ${u.zone ? u.zone : "<span style='color:gray;'>Not Set</span>"}</p>
+            <!-- ✅ NEW: ZONES -->
+            <p><b>Zone Day 1:</b>
+              ${u.zoneDay1 ? u.zoneDay1 : "<span style='color:gray;'>Not Set</span>"}
+            </p>
+
+            <p><b>Zone Day 2:</b>
+              ${u.zoneDay2 ? u.zoneDay2 : "<span style='color:gray;'>Not Set</span>"}
+            </p>
+
+            <!-- ✅ NEW: REFERRED BY -->
+            <p><b>Referred By:</b> ${safe(u.referredBy)}</p>
 
             <p><b>Manual Code:</b> ${safe(u.manualCode)}</p>
 

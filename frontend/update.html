@@ -29,14 +29,52 @@
     <input id="carVoucherNumber" placeholder="Car Voucher Number (optional)">
     <input id="carNumber" placeholder="Car Number (optional)">
 
-    <!-- ✅ Zone dropdown (optional) -->
-    <select id="zone">
-      <option value="">Zone (optional)</option>
-      <option value="A">Zone A</option>
-      <option value="B">Zone B</option>
-      <option value="C">Zone C</option>
-      <option value="D">Zone D</option>
-    </select>
+    <!-- ✅ referredBy dropdown + typing -->
+    <input id="referredBy" list="referredByList" placeholder="Referred By (1-21) (optional)" />
+    <datalist id="referredByList">
+      <option value="1"></option><option value="2"></option><option value="3"></option>
+      <option value="4"></option><option value="5"></option><option value="6"></option>
+      <option value="7"></option><option value="8"></option><option value="9"></option>
+      <option value="10"></option><option value="11"></option><option value="12"></option>
+      <option value="13"></option><option value="14"></option><option value="15"></option>
+      <option value="16"></option><option value="17"></option><option value="18"></option>
+      <option value="19"></option><option value="20"></option><option value="21"></option>
+    </datalist>
+
+    <!-- ✅ ZONE DAY 1 (3 dropdowns) -->
+    <div style="margin-top:10px;">
+      <label style="font-size:14px;">Zone Day 1 (optional)</label>
+      <div style="display:flex; gap:8px; margin-top:6px;">
+        <!-- A fixed -->
+        <select id="zoneD1Prefix" disabled>
+          <option value="A" selected>A</option>
+        </select>
+
+        <!-- Gender auto from gender field -->
+        <select id="zoneD1Gender" disabled>
+          <option value="">-</option>
+          <option value="M">M</option>
+          <option value="F">F</option>
+        </select>
+
+        <!-- U-Z -->
+        <select id="zoneD1Suffix">
+          <option value="">Select</option>
+          <option value="U">U</option>
+          <option value="V">V</option>
+          <option value="W">W</option>
+          <option value="X">X</option>
+          <option value="Y">Y</option>
+          <option value="Z">Z</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ✅ Auto Day 2 Zone Display -->
+    <div style="margin-top:10px;">
+      <label style="font-size:14px;">Zone Day 2 (Auto)</label>
+      <input id="zoneDay2" placeholder="Auto Generated" readonly />
+    </div>
 
     <select id="gateStatus">
       <option value="">Gate Status (optional)</option>
@@ -66,10 +104,46 @@
     return (v === undefined || v === null || v === "") ? "-" : v;
   }
 
+  document.getElementById("gender").addEventListener("change", updateZoneFields);
+  document.getElementById("zoneD1Suffix").addEventListener("change", updateZoneFields);
+
+  function mapDay1ToDay2Suffix(ch) {
+    const map = { U: "O", V: "P", W: "Q", X: "R", Y: "S", Z: "T" };
+    return map[ch] || "";
+  }
+
+  function updateZoneFields() {
+    const gender = document.getElementById("gender").value;
+    const zoneGender = document.getElementById("zoneD1Gender");
+
+    if (gender === "Male") zoneGender.value = "M";
+    else if (gender === "Female") zoneGender.value = "F";
+    else zoneGender.value = "";
+
+    const suffix = document.getElementById("zoneD1Suffix").value;
+    const day2Input = document.getElementById("zoneDay2");
+
+    if (!zoneGender.value || !suffix) {
+      day2Input.value = "";
+      return;
+    }
+
+    const day2Suffix = mapDay1ToDay2Suffix(suffix);
+    day2Input.value = `B${zoneGender.value}${day2Suffix}`;
+  }
+
   function updateUser() {
     const btn = document.getElementById("btn");
     const loader = document.getElementById("loader");
     const result = document.getElementById("result");
+
+    const zoneGender = document.getElementById("zoneD1Gender").value;
+    const zoneSuffix = document.getElementById("zoneD1Suffix").value;
+
+    let zoneDay1 = "";
+    if (zoneGender && zoneSuffix) {
+      zoneDay1 = `A${zoneGender}${zoneSuffix}`;
+    }
 
     const body = {
       manualCode: document.getElementById("manual").value.trim(),
@@ -79,11 +153,13 @@
       gender: document.getElementById("gender").value,
       aadhaarNumber: document.getElementById("aadhaarNumber").value.trim(),
 
-      // ✅ new fields
       address: document.getElementById("address").value.trim(),
       carVoucherNumber: document.getElementById("carVoucherNumber").value.trim(),
       carNumber: document.getElementById("carNumber").value.trim(),
-      zone: document.getElementById("zone").value,
+
+      // ✅ NEW
+      referredBy: document.getElementById("referredBy").value.trim(),
+      zoneDay1: zoneDay1,
 
       gateStatus: document.getElementById("gateStatus").value,
       washroomStatus: document.getElementById("washroomStatus").value
@@ -129,7 +205,10 @@
 
         <b>Car Voucher No:</b> ${safe(u.carVoucherNumber)}<br>
         <b>Car Number:</b> ${safe(u.carNumber)}<br>
-        <b>Zone:</b> ${u.zone ? u.zone : "<span style='color:gray;'>Not Set</span>"}<br>
+
+        <b>Zone Day 1:</b> ${u.zoneDay1 ? u.zoneDay1 : "<span style='color:gray;'>Not Set</span>"}<br>
+        <b>Zone Day 2:</b> ${u.zoneDay2 ? u.zoneDay2 : "<span style='color:gray;'>Not Set</span>"}<br>
+        <b>Referred By:</b> ${safe(u.referredBy)}<br>
 
         <b>Manual Code:</b> ${safe(u.manualCode)}<br>
 

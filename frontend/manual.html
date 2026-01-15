@@ -62,11 +62,15 @@
 
           <br>
 
-          <!-- ✅ Optional fields (future-proof) -->
+          <!-- ✅ Optional fields -->
           <b>Address:</b> ${safe(res.address)}<br>
           <b>Car Voucher No:</b> ${safe(res.carVoucherNumber)}<br>
           <b>Car Number:</b> ${safe(res.carNumber)}<br>
-          <b>Zone:</b> ${res.zone ? res.zone : "<span style='color:gray;'>Not Set</span>"}<br>
+
+          <!-- ✅ NEW -->
+          <b>Zone Day 1:</b> ${res.zoneDay1 ? res.zoneDay1 : "<span style='color:gray;'>Not Set</span>"}<br>
+          <b>Zone Day 2:</b> ${res.zoneDay2 ? res.zoneDay2 : "<span style='color:gray;'>Not Set</span>"}<br>
+          <b>Referred By:</b> ${safe(res.referredBy)}<br>
 
           <br>
 
