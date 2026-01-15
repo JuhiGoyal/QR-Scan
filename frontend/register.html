@@ -23,6 +23,20 @@
 
     <input id="aadhaarNumber" placeholder="Aadhaar Number" />
 
+    <!-- ✅ NEW FIELDS -->
+    <input id="address" placeholder="Address" />
+    <input id="carVoucherNumber" placeholder="Car Voucher Number" />
+    <input id="carNumber" placeholder="Car Number" />
+
+    <!-- ✅ Zone optional -->
+    <select id="zone">
+      <option value="">Select Zone (optional)</option>
+      <option value="A">Zone A</option>
+      <option value="B">Zone B</option>
+      <option value="C">Zone C</option>
+      <option value="D">Zone D</option>
+    </select>
+
     <button id="btn" type="button">Register</button>
 
     <div id="loader" style="display:none; margin-top:10px;">⏳ Registering...</div>
@@ -36,7 +50,7 @@
   // const API_BASE = "http://localhost:3000";
 
   // 👉 WHEN USING RENDER:
-  const API_BASE = "https://qr-backend-5qot.onrender.com";  // <-- CHANGE THIS
+  const API_BASE = "https://qr-backend-5qot.onrender.com";
 </script>
 
 <script>
@@ -51,11 +65,18 @@ function registerUser() {
     name: document.getElementById("name").value.trim(),
     phone: document.getElementById("phone").value.trim(),
     gender: document.getElementById("gender").value,
-    aadhaarNumber: document.getElementById("aadhaarNumber").value.trim()
+    aadhaarNumber: document.getElementById("aadhaarNumber").value.trim(),
+
+    // ✅ NEW FIELDS
+    address: document.getElementById("address").value.trim(),
+    carVoucherNumber: document.getElementById("carVoucherNumber").value.trim(),
+    carNumber: document.getElementById("carNumber").value.trim(),
+    zone: document.getElementById("zone").value // optional
   };
 
-  if (!body.name || !body.phone || !body.gender || !body.aadhaarNumber) {
-    alert("All fields are required");
+  // ✅ Required fields validation (zone optional)
+  if (!body.name || !body.phone || !body.gender || !body.aadhaarNumber || !body.address || !body.carVoucherNumber || !body.carNumber) {
+    alert("Please fill all required fields");
     return;
   }
 

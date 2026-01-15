@@ -11,6 +11,7 @@
 
   <div class="card">
     <input id="manual" placeholder="Manual Code (Required)">
+
     <input id="name" placeholder="New Name (optional)">
     <input id="phone" placeholder="New Phone (optional)">
 
@@ -22,6 +23,20 @@
     </select>
 
     <input id="aadhaarNumber" placeholder="Aadhaar Number (optional)">
+
+    <!-- ✅ NEW fields -->
+    <input id="address" placeholder="Address (optional)">
+    <input id="carVoucherNumber" placeholder="Car Voucher Number (optional)">
+    <input id="carNumber" placeholder="Car Number (optional)">
+
+    <!-- ✅ Zone dropdown (optional) -->
+    <select id="zone">
+      <option value="">Zone (optional)</option>
+      <option value="A">Zone A</option>
+      <option value="B">Zone B</option>
+      <option value="C">Zone C</option>
+      <option value="D">Zone D</option>
+    </select>
 
     <select id="gateStatus">
       <option value="">Gate Status (optional)</option>
@@ -45,7 +60,11 @@
 <script>
   // 👉 REMOVE localhost before deployment:
   // const API_BASE = "http://localhost:3000";
-  const API_BASE = "https://qr-backend-5qot.onrender.com"; // <-- update this
+  const API_BASE = "https://qr-backend-5qot.onrender.com";
+
+  function safe(v) {
+    return (v === undefined || v === null || v === "") ? "-" : v;
+  }
 
   function updateUser() {
     const btn = document.getElementById("btn");
@@ -54,10 +73,18 @@
 
     const body = {
       manualCode: document.getElementById("manual").value.trim(),
+
       name: document.getElementById("name").value.trim(),
       phone: document.getElementById("phone").value.trim(),
       gender: document.getElementById("gender").value,
       aadhaarNumber: document.getElementById("aadhaarNumber").value.trim(),
+
+      // ✅ new fields
+      address: document.getElementById("address").value.trim(),
+      carVoucherNumber: document.getElementById("carVoucherNumber").value.trim(),
+      carNumber: document.getElementById("carNumber").value.trim(),
+      zone: document.getElementById("zone").value,
+
       gateStatus: document.getElementById("gateStatus").value,
       washroomStatus: document.getElementById("washroomStatus").value
     };
@@ -67,6 +94,7 @@
       return;
     }
 
+    // Remove empty fields (so only provided fields update)
     Object.keys(body).forEach(k => !body[k] && delete body[k]);
 
     btn.disabled = true;
@@ -84,23 +112,32 @@
       loader.style.display = "none";
 
       if (!data.success) {
-        result.innerHTML = `<h3 style="color:red;">${data.message}</h3>`;
+        result.innerHTML = `<h3 style="color:red;">${safe(data.message)}</h3>`;
         return;
       }
 
       const u = data.user;
+
       result.innerHTML = `
         <h3 style="color:green;">User Updated Successfully ✔</h3>
-        <b>Name:</b> ${u.name}<br>
-        <b>Phone:</b> ${u.phone}<br>
-        <b>Gender:</b> ${u.gender}<br>
-        <b>Aadhaar:</b> ${u.aadhaarNumber}<br>
-        <b>Manual Code:</b> ${u.manualCode}<br>
-        <b>Gate:</b> ${u.gateStatus}<br>
-        <b>Washroom:</b> ${u.washroomStatus}<br><br>
 
-        <button onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
-        <button onclick="window.location.href='scan.html'" style="margin-left:10px;">Open Scanner</button>
+        <b>Name:</b> ${safe(u.name)}<br>
+        <b>Phone:</b> ${safe(u.phone)}<br>
+        <b>Gender:</b> ${safe(u.gender)}<br>
+        <b>Aadhaar:</b> ${safe(u.aadhaarNumber)}<br>
+        <b>Address:</b> ${safe(u.address)}<br>
+
+        <b>Car Voucher No:</b> ${safe(u.carVoucherNumber)}<br>
+        <b>Car Number:</b> ${safe(u.carNumber)}<br>
+        <b>Zone:</b> ${u.zone ? u.zone : "<span style='color:gray;'>Not Set</span>"}<br>
+
+        <b>Manual Code:</b> ${safe(u.manualCode)}<br>
+
+        <b>Gate:</b> ${safe(u.gateStatus)}<br>
+        <b>Washroom:</b> ${safe(u.washroomStatus)}<br><br>
+
+        <button type="button" onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
+        <button type="button" onclick="window.location.href='scanner.html'" style="margin-left:10px;">Open Scanner</button>
       `;
     })
     .catch(() => {

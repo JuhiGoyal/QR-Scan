@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema({
   gender: String,
   aadhaarNumber: String,
   manualCode: String,
+  address: String,
+  carVoucherNumber: String,
+  carNumber: String,
+  zone: { type: String, default: "" },
 
   gateStatus: { type: String, default: "OUT" },
   washroomStatus: { type: String, default: "OUT" },
@@ -47,7 +51,10 @@ const User = mongoose.model("User", userSchema);
 /* ---------------- REGISTER USER ---------------- */
 app.post("/register", async (req, res) => {
   try {
-    const { name, phone, gender, aadhaarNumber } = req.body;
+    const { name, phone, gender, aadhaarNumber,address,
+      carVoucherNumber,
+      carNumber,
+      zone } = req.body;
 
     if (!name || !phone || !gender || !aadhaarNumber) {
       return res.json({ success: false, message: "All fields required" });
@@ -60,7 +67,10 @@ app.post("/register", async (req, res) => {
       phone,
       gender,
       aadhaarNumber,
-      manualCode
+      manualCode, address,
+      carVoucherNumber,
+      carNumber,
+      zone
     });
 
     await user.save();
@@ -91,6 +101,10 @@ app.post("/register", async (req, res) => {
       phone: user.phone,
       gender: user.gender,
       aadhaarNumber: user.aadhaarNumber,
+      address: user.address,
+      carVoucherNumber: user.carVoucherNumber,
+      carNumber: user.carNumber,
+      zone: user.zone,
       manualCode: user.manualCode,
       gateStatus: user.gateStatus,
       washroomStatus: user.washroomStatus,
@@ -134,6 +148,10 @@ app.get("/scan/:id", async (req, res) => {
     manualCode: user.manualCode,
     gender: user.gender,
     aadhaarNumber: user.aadhaarNumber,
+    address: user.address,
+    carVoucherNumber: user.carVoucherNumber,
+    carNumber: user.carNumber,
+    zone: user.zone,
     gateStatus: user.gateStatus,
     washroomStatus: user.washroomStatus,
     time: new Date()

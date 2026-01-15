@@ -14,7 +14,11 @@
 <script>
   // 👉 REMOVE localhost before uploading:
   // const API_BASE = "http://localhost:3000";
-  const API_BASE = "https://qr-backend-5qot.onrender.com"; // <-- change this
+  const API_BASE = "https://qr-backend-5qot.onrender.com";
+
+  function safe(v) {
+    return (v === undefined || v === null || v === "") ? "-" : v;
+  }
 
   function loadUsers() {
     fetch(`${API_BASE}/users`)
@@ -22,25 +26,36 @@
       .then(data => {
         users.innerHTML = data.map(u => `
           <div class="card">
-            <h3>${u.name}</h3>
-            <p><b>Phone:</b> ${u.phone}</p>
-            <p><b>Gender:</b> ${u.gender}</p>
-            <p><b>Aadhaar:</b> ${u.aadhaarNumber}</p>
-            <p><b>Manual Code:</b> ${u.manualCode}</p>
+            <h3>${safe(u.name)}</h3>
+
+            <p><b>Phone:</b> ${safe(u.phone)}</p>
+            <p><b>Gender:</b> ${safe(u.gender)}</p>
+            <p><b>Aadhaar:</b> ${safe(u.aadhaarNumber)}</p>
+            <p><b>Address:</b> ${safe(u.address)}</p>
+
+            <p><b>Car Voucher No:</b> ${safe(u.carVoucherNumber)}</p>
+            <p><b>Car Number:</b> ${safe(u.carNumber)}</p>
+
+            <p><b>Zone:</b> ${u.zone ? u.zone : "<span style='color:gray;'>Not Set</span>"}</p>
+
+            <p><b>Manual Code:</b> ${safe(u.manualCode)}</p>
 
             <p><b>Gate:</b>
               <span class="badge ${u.gateStatus === 'IN' ? 'green' : 'red'}">
-                ${u.gateStatus}
+                ${safe(u.gateStatus)}
               </span>
             </p>
 
             <p><b>Washroom:</b>
               <span class="badge ${u.washroomStatus === 'IN' ? 'blue' : 'gray'}">
-                ${u.washroomStatus}
+                ${safe(u.washroomStatus)}
               </span>
             </p>
 
-            ${u.qrImageUrl ? `<img src="${u.qrImageUrl}" width="130">` : `<p>No QR Image</p>`}
+            ${u.qrImageUrl
+              ? `<img src="${u.qrImageUrl}" width="130">`
+              : `<p>No QR Image</p>`
+            }
           </div>
         `).join("");
       })

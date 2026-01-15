@@ -22,14 +22,14 @@
 </div>
 
 <script>
-  // 🔥 IMPORTANT:
-  // QR CODE MUST CONTAIN:
-  // https://your-render-app.onrender.com/scan/<mongo_id>
-
   const result = document.getElementById("result");
   const qr = new Html5Qrcode("reader");
 
   let isProcessing = false;
+
+  function safe(v) {
+    return (v === undefined || v === null || v === "") ? "-" : v;
+  }
 
   function startScanner() {
     qr.start(
@@ -45,23 +45,34 @@
           .then(r => r.json())
           .then(res => {
             if (!res.success) {
-              result.innerHTML = `<h2 style="color:red;">User not found ❌</h2>`;
+              result.innerHTML = `<h2 style="color:red;">${safe(res.message)} ❌</h2>`;
               return;
             }
 
             result.innerHTML = `
-              <h2 style="color:green;">${res.message} ✔</h2>
+              <h2 style="color:green;">${safe(res.message)} ✔</h2>
 
               <div style="margin-top:10px;">
-                <b>Name:</b> ${res.name}<br>
-                <b>Phone:</b> ${res.phone}<br>
-                <b>Manual Code:</b> ${res.manualCode}<br><br>
+                <b>Name:</b> ${safe(res.name)}<br>
+                <b>Phone:</b> ${safe(res.phone)}<br>
+                <b>Manual Code:</b> ${safe(res.manualCode)}<br>
+                <b>Aadhaar:</b> ${safe(res.aadhaarNumber)}<br>
+
+                <br>
+
+                <!-- ✅ NEW fields -->
+                <b>Address:</b> ${safe(res.address)}<br>
+                <b>Car Voucher No:</b> ${safe(res.carVoucherNumber)}<br>
+                <b>Car Number:</b> ${safe(res.carNumber)}<br>
+                <b>Zone:</b> ${res.zone ? res.zone : "<span style='color:gray;'>Not Set</span>"}<br>
+
+                <br>
 
                 <b>Gate:</b>
-                <span style="color:${res.gateStatus === "IN" ? "green" : "red"}">${res.gateStatus}</span><br>
+                <span style="color:${res.gateStatus === "IN" ? "green" : "red"}">${safe(res.gateStatus)}</span><br>
 
                 <b>Washroom:</b>
-                <span style="color:${res.washroomStatus === "IN" ? "blue" : "gray"}">${res.washroomStatus}</span><br><br>
+                <span style="color:${res.washroomStatus === "IN" ? "blue" : "gray"}">${safe(res.washroomStatus)}</span><br><br>
 
                 <small>Updated at: ${new Date(res.time).toLocaleTimeString()}</small>
               </div>
