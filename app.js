@@ -139,6 +139,27 @@ app.get("/scan/:id", async (req, res) => {
     time: new Date()
   });
 });
+async function downloadQR(qrUrl, fileName) {
+  try {
+    const response = await fetch(qrUrl);
+    if (!response.ok) throw new Error("Failed to fetch QR image");
+
+    const blob = await response.blob();
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${fileName}.png`;  // ✅ manualCode as filename
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    alert("Download failed");
+  }
+}
 
 /* ---------------- MANUAL CODE FALLBACK ---------------- */
 app.get("/manual", async (req, res) => {
