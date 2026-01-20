@@ -38,10 +38,11 @@ const userSchema = new mongoose.Schema({
   carNumber: String,
   zone: { type: String, default: "" },
 
-  // ✅ NEW FIELDS
+  // ✅ NEW fields
+  serialNo: { type: String, default: "" },        // ✅ added
   zoneDay1: { type: String, default: "" },
   zoneDay2: { type: String, default: "" },
-  referredBy: { type: Number, default: null },
+  referredBy: { type: Number, default: null },    // Preferred By
 
   gateStatus: { type: String, default: "OUT" },
   washroomStatus: { type: String, default: "OUT" },
@@ -57,7 +58,7 @@ const User = mongoose.model("User", userSchema);
 /* ---------------- HELPER: Event Day Check ---------------- */
 function isEventDay() {
   const eventDate = process.env.EVENT_DATE; // YYYY-MM-DD
-  if (!eventDate) return true; // if not set then allow
+  if (!eventDate) return true;
 
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -80,7 +81,7 @@ app.post("/scanner-login", (req, res) => {
     const token = jwt.sign(
       { role: "scanner" },
       process.env.JWT_SECRET,
-      { expiresIn: "12h" } // ✅ works for full event day
+      { expiresIn: "12h" }
     );
 
     res.json({ success: true, token });
@@ -109,8 +110,9 @@ function verifyScannerToken(req, res, next) {
 }
 
 /* ---------------- HELPER: Day1 -> Day2 zone mapping ---------------- */
+// ✅ Update: remove U,V (Day1) and O,P (Day2)
 function mapDay1ToDay2Suffix(ch) {
-  const map = { U: "O", V: "P", W: "Q", X: "R", Y: "S", Z: "T" };
+  const map = { W: "Q", X: "R", Y: "S", Z: "T" };
   return map[ch] || "";
 }
 
@@ -130,6 +132,38 @@ function computeZoneDay2(zoneDay1) {
   }
   return "";
 }
+/* ---------------- GET USER BY ID (FOR UPDATE VIA QR) ---------------- */
+app.get("/user/:id", verifyScannerToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        name: user.name,
+        phone: user.phone,
+        gender: user.gender,
+        aadhaarNumber: user.aadhaarNumber,
+        address: user.address,
+        carVoucherNumber: user.carVoucherNumber,
+        carNumber: user.carNumber,
+        serialNo: user.serialNo,
+        zoneDay1: user.zoneDay1,
+        zoneDay2: user.zoneDay2,
+        referredBy: user.referredBy,
+        manualCode: user.manualCode
+      }
+    });
+  } catch (err) {
+    console.log("User Fetch Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 /* ---------------- REGISTER USER ---------------- */
 app.post("/register", async (req, res) => {
@@ -145,18 +179,17 @@ app.post("/register", async (req, res) => {
       zone,
 
       // ✅ NEW INPUTS
+      serialNo,
       zoneDay1,
       referredBy
     } = req.body;
 
-    // ✅ No field mandatory now
-
-    // ✅ referredBy validation (1-21) only if provided
+    // ✅ Preferred By validation: no limit
     let referredByValue = null;
     if (referredBy !== undefined && referredBy !== null && referredBy !== "") {
       const num = Number(referredBy);
-      if (!Number.isInteger(num) || num < 1 || num > 21) {
-        return res.json({ success: false, message: "referredBy must be a number between 1 to 21" });
+      if (!Number.isFinite(num)) {
+        return res.json({ success: false, message: "Referred By must be a valid number" });
       }
       referredByValue = num;
     }
@@ -187,6 +220,7 @@ app.post("/register", async (req, res) => {
       carNumber,
       zone,
 
+      serialNo: serialNo ? String(serialNo).trim() : "",
       zoneDay1: zoneDay1Value,
       zoneDay2: zoneDay2Value,
       referredBy: referredByValue
@@ -196,10 +230,8 @@ app.post("/register", async (req, res) => {
 
     const scanUrl = `${process.env.BASE_URL}/scan/${user._id}`;
 
-    /* --------- GENERATE QR BUFFER --------- */
     const qrBuffer = await QRCode.toBuffer(scanUrl);
 
-    /* --------- UPLOAD TO S3 --------- */
     const key = `qr/${user._id}.png`;
 
     await s3.putObject({
@@ -216,6 +248,7 @@ app.post("/register", async (req, res) => {
 
     res.json({
       success: true,
+
       name: user.name,
       phone: user.phone,
       gender: user.gender,
@@ -225,6 +258,7 @@ app.post("/register", async (req, res) => {
       carNumber: user.carNumber,
       zone: user.zone,
 
+      serialNo: user.serialNo,
       zoneDay1: user.zoneDay1,
       zoneDay2: user.zoneDay2,
       referredBy: user.referredBy,
@@ -247,7 +281,6 @@ app.get("/scan/:id", verifyScannerToken, async (req, res) => {
   const { id } = req.params;
   const { action } = req.query;
 
-  // ✅ Only allow on EVENT DAY
   if (!isEventDay()) {
     return res.json({ success: false, message: "QR scanning will be active only on event day" });
   }
@@ -272,6 +305,7 @@ app.get("/scan/:id", verifyScannerToken, async (req, res) => {
   res.json({
     success: true,
     message: `${action === "gate" ? "Gate" : "Washroom"} scan successful`,
+
     name: user.name,
     phone: user.phone,
     manualCode: user.manualCode,
@@ -282,6 +316,7 @@ app.get("/scan/:id", verifyScannerToken, async (req, res) => {
     carNumber: user.carNumber,
     zone: user.zone,
 
+    serialNo: user.serialNo,
     zoneDay1: user.zoneDay1,
     zoneDay2: user.zoneDay2,
     referredBy: user.referredBy,
@@ -291,28 +326,6 @@ app.get("/scan/:id", verifyScannerToken, async (req, res) => {
     time: new Date()
   });
 });
-
-async function downloadQR(qrUrl, fileName) {
-  try {
-    const response = await fetch(qrUrl);
-    if (!response.ok) throw new Error("Failed to fetch QR image");
-
-    const blob = await response.blob();
-
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${fileName}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error(err);
-    alert("Download failed");
-  }
-}
 
 /* ---------------- MANUAL CODE FALLBACK ---------------- */
 app.get("/manual", async (req, res) => {
@@ -340,6 +353,7 @@ app.get("/manual", async (req, res) => {
     name: user.name,
     phone: user.phone,
     manualCode: user.manualCode,
+
     gender: user.gender,
     aadhaarNumber: user.aadhaarNumber,
     address: user.address,
@@ -347,6 +361,7 @@ app.get("/manual", async (req, res) => {
     carNumber: user.carNumber,
     zone: user.zone,
 
+    serialNo: user.serialNo,
     zoneDay1: user.zoneDay1,
     zoneDay2: user.zoneDay2,
     referredBy: user.referredBy,
@@ -354,7 +369,6 @@ app.get("/manual", async (req, res) => {
     gateStatus: user.gateStatus,
     washroomStatus: user.washroomStatus
   });
-
 });
 
 /* ---------------- ADMIN USERS ---------------- */
@@ -370,7 +384,6 @@ app.post("/update", async (req, res) => {
     return res.status(404).json({ success: false, message: "User not found" });
   }
 
-  // ✅ If zoneDay1 is being updated, auto set zoneDay2
   if (req.body.zoneDay1 && typeof req.body.zoneDay1 === "string") {
     const z1 = req.body.zoneDay1.trim().toUpperCase();
     const z2 = computeZoneDay2(z1);
@@ -383,11 +396,11 @@ app.post("/update", async (req, res) => {
     req.body.zoneDay2 = z2;
   }
 
-  // ✅ referredBy validation in update also (only if present)
+  // ✅ Preferred By validation: no limit
   if (req.body.referredBy !== undefined && req.body.referredBy !== null && req.body.referredBy !== "") {
     const num = Number(req.body.referredBy);
-    if (!Number.isInteger(num) || num < 1 || num > 21) {
-      return res.json({ success: false, message: "referredBy must be a number between 1 to 21" });
+    if (!Number.isFinite(num)) {
+      return res.json({ success: false, message: "Referred By must be a valid number" });
     }
     req.body.referredBy = num;
   }

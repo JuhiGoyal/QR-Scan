@@ -12,6 +12,9 @@
   <div class="card">
     <input id="manual" placeholder="Manual Code (Required)">
 
+    <!-- ✅ Serial No -->
+    <input id="serialNo" placeholder="Serial No (optional)">
+
     <input id="name" placeholder="New Name (optional)">
     <input id="phone" placeholder="New Phone (optional)">
 
@@ -24,44 +27,35 @@
 
     <input id="aadhaarNumber" placeholder="Aadhaar Number (optional)">
 
-    <!-- ✅ NEW fields -->
     <input id="address" placeholder="Address (optional)">
     <input id="carVoucherNumber" placeholder="Car Voucher Number (optional)">
     <input id="carNumber" placeholder="Car Number (optional)">
 
-    <!-- ✅ referredBy dropdown + typing -->
-    <input id="referredBy" list="referredByList" placeholder="Referred By (1-21) (optional)" />
-    <datalist id="referredByList">
-      <option value="1"></option><option value="2"></option><option value="3"></option>
-      <option value="4"></option><option value="5"></option><option value="6"></option>
-      <option value="7"></option><option value="8"></option><option value="9"></option>
-      <option value="10"></option><option value="11"></option><option value="12"></option>
-      <option value="13"></option><option value="14"></option><option value="15"></option>
-      <option value="16"></option><option value="17"></option><option value="18"></option>
-      <option value="19"></option><option value="20"></option><option value="21"></option>
-    </datalist>
+    <!-- ✅ Preferred By (NO LIMIT) -->
+    <input
+      id="referredBy"
+      type="number"
+      inputmode="numeric"
+      placeholder="Referred By (Number)"
+    />
 
     <!-- ✅ ZONE DAY 1 (3 dropdowns) -->
     <div style="margin-top:10px;">
       <label style="font-size:14px;">Zone Day 1 (optional)</label>
       <div style="display:flex; gap:8px; margin-top:6px;">
-        <!-- A fixed -->
         <select id="zoneD1Prefix" disabled>
           <option value="A" selected>A</option>
         </select>
 
-        <!-- Gender auto from gender field -->
         <select id="zoneD1Gender" disabled>
           <option value="">-</option>
           <option value="M">M</option>
           <option value="F">F</option>
         </select>
 
-        <!-- U-Z -->
+        <!-- ✅ Only W/X/Y/Z -->
         <select id="zoneD1Suffix">
           <option value="">Select</option>
-          <option value="U">U</option>
-          <option value="V">V</option>
           <option value="W">W</option>
           <option value="X">X</option>
           <option value="Y">Y</option>
@@ -96,7 +90,6 @@
 </div>
 
 <script>
-  // 👉 REMOVE localhost before deployment:
   // const API_BASE = "http://localhost:3000";
   const API_BASE = "https://qr-backend-5qot.onrender.com";
 
@@ -108,7 +101,7 @@
   document.getElementById("zoneD1Suffix").addEventListener("change", updateZoneFields);
 
   function mapDay1ToDay2Suffix(ch) {
-    const map = { U: "O", V: "P", W: "Q", X: "R", Y: "S", Z: "T" };
+    const map = { W: "Q", X: "R", Y: "S", Z: "T" };
     return map[ch] || "";
   }
 
@@ -148,6 +141,9 @@
     const body = {
       manualCode: document.getElementById("manual").value.trim(),
 
+      // ✅ Serial No update
+      serialNo: document.getElementById("serialNo").value.trim(),
+
       name: document.getElementById("name").value.trim(),
       phone: document.getElementById("phone").value.trim(),
       gender: document.getElementById("gender").value,
@@ -157,7 +153,7 @@
       carVoucherNumber: document.getElementById("carVoucherNumber").value.trim(),
       carNumber: document.getElementById("carNumber").value.trim(),
 
-      // ✅ NEW
+      // ✅ Preferred By unlimited
       referredBy: document.getElementById("referredBy").value.trim(),
       zoneDay1: zoneDay1,
 
@@ -170,7 +166,6 @@
       return;
     }
 
-    // Remove empty fields (so only provided fields update)
     Object.keys(body).forEach(k => !body[k] && delete body[k]);
 
     btn.disabled = true;
@@ -194,9 +189,14 @@
 
       const u = data.user;
 
+      // ✅ detect if opened from scanner
+      const params = new URLSearchParams(window.location.search);
+      const fromScanner = params.get("from") === "scanner";
+
       result.innerHTML = `
         <h3 style="color:green;">User Updated Successfully ✔</h3>
 
+        <b>Serial No:</b> ${safe(u.serialNo)}<br>
         <b>Name:</b> ${safe(u.name)}<br>
         <b>Phone:</b> ${safe(u.phone)}<br>
         <b>Gender:</b> ${safe(u.gender)}<br>
@@ -217,7 +217,22 @@
 
         <button type="button" onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
         <button type="button" onclick="window.location.href='scanner.html'" style="margin-left:10px;">Open Scanner</button>
+
+        ${
+          fromScanner
+            ? `<button type="button"
+                  onclick="localStorage.removeItem('updateUserData'); window.location.href='scanner.html';"
+                  style="margin-left:10px; background:#1e4db7; color:white;">
+                  Scan Next
+               </button>`
+            : ""
+        }
       `;
+
+      // ✅ clear saved user data after update (only scanner flow)
+      if (fromScanner) {
+        localStorage.removeItem("updateUserData");
+      }
     })
     .catch(() => {
       btn.disabled = false;
@@ -225,6 +240,41 @@
       alert("Connection failed. Server not reachable.");
     });
   }
+
+  // ✅ AUTO FILL (scanner se redirect hone par)
+  (function autoFillFromScanner() {
+    const saved = localStorage.getItem("updateUserData");
+    if (!saved) return;
+
+    const u = JSON.parse(saved);
+
+    // ✅ autofill manual code and other fields
+    document.getElementById("manual").value = u.manualCode || "";
+    document.getElementById("serialNo").value = u.serialNo || "";
+    document.getElementById("name").value = u.name || "";
+    document.getElementById("phone").value = u.phone || "";
+    document.getElementById("gender").value = u.gender || "";
+    document.getElementById("aadhaarNumber").value = u.aadhaarNumber || "";
+    document.getElementById("address").value = u.address || "";
+    document.getElementById("carVoucherNumber").value = u.carVoucherNumber || "";
+    document.getElementById("carNumber").value = u.carNumber || "";
+    document.getElementById("referredBy").value =
+      (u.referredBy !== null && u.referredBy !== undefined) ? u.referredBy : "";
+
+    // ✅ auto zone gender display
+    if (u.gender === "Male") document.getElementById("zoneD1Gender").value = "M";
+    else if (u.gender === "Female") document.getElementById("zoneD1Gender").value = "F";
+    else document.getElementById("zoneD1Gender").value = "";
+
+    // ✅ if zoneDay1 exists like "AMW" then set suffix "W"
+    if (u.zoneDay1 && typeof u.zoneDay1 === "string" && u.zoneDay1.length >= 3) {
+      const suffix = u.zoneDay1[u.zoneDay1.length - 1];
+      document.getElementById("zoneD1Suffix").value = suffix || "";
+    }
+
+    // ✅ update auto day2 field
+    updateZoneFields();
+  })();
 </script>
 
 </body>

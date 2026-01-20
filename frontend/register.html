@@ -11,6 +11,9 @@
   <h1>User Registration</h1>
 
   <div class="card">
+    <!-- ✅ NEW Serial No -->
+    <input id="serialNo" placeholder="Serial No" />
+
     <input id="name" placeholder="Full Name" />
     <input id="phone" placeholder="Phone Number" />
 
@@ -23,36 +26,17 @@
 
     <input id="aadhaarNumber" placeholder="Aadhaar Number" />
 
-    <!-- ✅ NEW FIELDS -->
     <input id="address" placeholder="Address" />
     <input id="carVoucherNumber" placeholder="Car Voucher Number" />
     <input id="carNumber" placeholder="Car Number" />
 
-    <!-- ✅ referredBy: dropdown + typing (1-21) -->
-    <input id="referredBy" list="referredByList" placeholder="Referred By (1-21)" />
-    <datalist id="referredByList">
-      <option value="1"></option>
-      <option value="2"></option>
-      <option value="3"></option>
-      <option value="4"></option>
-      <option value="5"></option>
-      <option value="6"></option>
-      <option value="7"></option>
-      <option value="8"></option>
-      <option value="9"></option>
-      <option value="10"></option>
-      <option value="11"></option>
-      <option value="12"></option>
-      <option value="13"></option>
-      <option value="14"></option>
-      <option value="15"></option>
-      <option value="16"></option>
-      <option value="17"></option>
-      <option value="18"></option>
-      <option value="19"></option>
-      <option value="20"></option>
-      <option value="21"></option>
-    </datalist>
+    <!-- ✅ Preferred By (NO LIMIT) -->
+    <input
+      id="referredBy"
+      type="number"
+      inputmode="numeric"
+      placeholder="Referred By (Number)"
+    />
 
     <!-- ✅ ZONE DAY 1 (3 dropdowns) -->
     <div style="margin-top:10px;">
@@ -70,11 +54,9 @@
           <option value="F">F</option>
         </select>
 
-        <!-- U-Z -->
+        <!-- ✅ Day1 suffix allowed only: W X Y Z -->
         <select id="zoneD1Suffix">
           <option value="">Select</option>
-          <option value="U">U</option>
-          <option value="V">V</option>
           <option value="W">W</option>
           <option value="X">X</option>
           <option value="Y">Y</option>
@@ -96,106 +78,108 @@
   </div>
 </div>
 
-<!-- 🔥 CONFIG: Set this when you deploy -->
 <script>
   // 👉 WHEN LOCAL TESTING:
   // const API_BASE = "http://localhost:3000";
 
   // 👉 WHEN USING RENDER:
   const API_BASE = "https://qr-backend-5qot.onrender.com";
-  
 </script>
 
 <script>
-document.getElementById("btn").addEventListener("click", registerUser);
+  document.getElementById("btn").addEventListener("click", registerUser);
 
-// ✅ Auto set zone gender from gender dropdown
-document.getElementById("gender").addEventListener("change", updateZoneFields);
-document.getElementById("zoneD1Suffix").addEventListener("change", updateZoneFields);
+  // ✅ Auto set zone gender from gender dropdown
+  document.getElementById("gender").addEventListener("change", updateZoneFields);
+  document.getElementById("zoneD1Suffix").addEventListener("change", updateZoneFields);
 
-function mapDay1ToDay2Suffix(ch) {
-  const map = { U: "O", V: "P", W: "Q", X: "R", Y: "S", Z: "T" };
-  return map[ch] || "";
-}
-
-function updateZoneFields() {
-  const gender = document.getElementById("gender").value;
-  const zoneGender = document.getElementById("zoneD1Gender");
-
-  if (gender === "Male") zoneGender.value = "M";
-  else if (gender === "Female") zoneGender.value = "F";
-  else zoneGender.value = "";
-
-  const suffix = document.getElementById("zoneD1Suffix").value;
-  const day2Input = document.getElementById("zoneDay2");
-
-  if (!zoneGender.value || !suffix) {
-    day2Input.value = "";
-    return;
+  // ✅ Day1 -> Day2 mapping: only WXYZ -> QRST
+  function mapDay1ToDay2Suffix(ch) {
+    const map = { W: "Q", X: "R", Y: "S", Z: "T" };
+    return map[ch] || "";
   }
 
-  const day2Suffix = mapDay1ToDay2Suffix(suffix);
-  day2Input.value = `B${zoneGender.value}${day2Suffix}`;
-}
+  function updateZoneFields() {
+    const gender = document.getElementById("gender").value;
+    const zoneGender = document.getElementById("zoneD1Gender");
 
-function registerUser() {
-  const btn = document.getElementById("btn");
-  const loader = document.getElementById("loader");
-  const result = document.getElementById("result");
+    if (gender === "Male") zoneGender.value = "M";
+    else if (gender === "Female") zoneGender.value = "F";
+    else zoneGender.value = "";
 
-  const zoneGender = document.getElementById("zoneD1Gender").value;
-  const zoneSuffix = document.getElementById("zoneD1Suffix").value;
+    const suffix = document.getElementById("zoneD1Suffix").value;
+    const day2Input = document.getElementById("zoneDay2");
 
-  let zoneDay1 = "";
-  if (zoneGender && zoneSuffix) {
-    zoneDay1 = `A${zoneGender}${zoneSuffix}`;
-  }
-
-  const body = {
-    name: document.getElementById("name").value.trim(),
-    phone: document.getElementById("phone").value.trim(),
-    gender: document.getElementById("gender").value,
-    aadhaarNumber: document.getElementById("aadhaarNumber").value.trim(),
-
-    address: document.getElementById("address").value.trim(),
-    carVoucherNumber: document.getElementById("carVoucherNumber").value.trim(),
-    carNumber: document.getElementById("carNumber").value.trim(),
-
-    referredBy: document.getElementById("referredBy").value.trim(),
-    zoneDay1: zoneDay1
-  };
-
-  // ✅ NO MANDATORY FIELD VALIDATION NOW
-
-  btn.disabled = true;
-  loader.style.display = "block";
-  result.innerHTML = "";
-
-  fetch(`${API_BASE}/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  })
-  .then(res => res.json())
-  .then(data => {
-    btn.disabled = false;
-    loader.style.display = "none";
-
-    if (!data.success) {
-      result.innerHTML = `<h3 style="color:red;">${data.message ? data.message : "Registration failed"}</h3>`;
+    if (!zoneGender.value || !suffix) {
+      day2Input.value = "";
       return;
     }
 
-    localStorage.setItem("qrUser", JSON.stringify(data));
-    window.location.href = "qr.html";
-  })
-  .catch(err => {
-    console.error(err);
-    btn.disabled = false;
-    loader.style.display = "none";
-    alert("Registration failed. Check backend connection.");
-  });
-}
+    const day2Suffix = mapDay1ToDay2Suffix(suffix);
+    day2Input.value = `B${zoneGender.value}${day2Suffix}`;
+  }
+
+  function registerUser() {
+    const btn = document.getElementById("btn");
+    const loader = document.getElementById("loader");
+    const result = document.getElementById("result");
+
+    const zoneGender = document.getElementById("zoneD1Gender").value;
+    const zoneSuffix = document.getElementById("zoneD1Suffix").value;
+
+    let zoneDay1 = "";
+    if (zoneGender && zoneSuffix) {
+      zoneDay1 = `A${zoneGender}${zoneSuffix}`;
+    }
+
+    const referredByRaw = document.getElementById("referredBy").value.trim();
+
+    const body = {
+      serialNo: document.getElementById("serialNo").value.trim(),
+
+      name: document.getElementById("name").value.trim(),
+      phone: document.getElementById("phone").value.trim(),
+      gender: document.getElementById("gender").value,
+      aadhaarNumber: document.getElementById("aadhaarNumber").value.trim(),
+
+      address: document.getElementById("address").value.trim(),
+      carVoucherNumber: document.getElementById("carVoucherNumber").value.trim(),
+      carNumber: document.getElementById("carNumber").value.trim(),
+
+      // ✅ send only if provided
+      referredBy: referredByRaw,
+      zoneDay1: zoneDay1
+    };
+
+    btn.disabled = true;
+    loader.style.display = "block";
+    result.innerHTML = "";
+
+    fetch(`${API_BASE}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    })
+    .then(res => res.json())
+    .then(data => {
+      btn.disabled = false;
+      loader.style.display = "none";
+
+      if (!data.success) {
+        result.innerHTML = `<h3 style="color:red;">${data.message ? data.message : "Registration failed"}</h3>`;
+        return;
+      }
+
+      localStorage.setItem("qrUser", JSON.stringify(data));
+      window.location.href = "qr.html";
+    })
+    .catch(err => {
+      console.error(err);
+      btn.disabled = false;
+      loader.style.display = "none";
+      alert("Registration failed. Check backend connection.");
+    });
+  }
 </script>
 
 </body>

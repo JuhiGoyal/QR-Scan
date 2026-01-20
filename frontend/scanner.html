@@ -35,6 +35,11 @@
         Scan Next
       </button>
 
+      <!-- ✅ Update This User Button -->
+      <button id="updateBtn" type="button" style="display:none; margin-top:15px; margin-left:10px;">
+        Update This User
+      </button>
+
       <!-- ✅ Logout -->
       <button id="logoutBtn" type="button" style="margin-top:15px; margin-left:10px;">
         Logout
@@ -47,12 +52,16 @@
 <script>
   // ✅ BACKEND BASE
   const API_BASE = "https://qr-backend-5qot.onrender.com";
- 
+
   const loginBox = document.getElementById("loginBox");
   const scanBox = document.getElementById("scanBox");
   const loginMsg = document.getElementById("loginMsg");
   const result = document.getElementById("result");
   const scanNextBtn = document.getElementById("scanNextBtn");
+
+  // ✅ Update button vars
+  const updateBtn = document.getElementById("updateBtn");
+  let lastScannedUserId = null;
 
   const TOKEN_KEY = "scannerToken";
 
@@ -69,6 +78,14 @@
 
   function hideScanNextButton() {
     scanNextBtn.style.display = "none";
+  }
+
+  function showUpdateButton() {
+    updateBtn.style.display = "inline-block";
+  }
+
+  function hideUpdateButton() {
+    updateBtn.style.display = "none";
   }
 
   function getToken() {
@@ -135,6 +152,10 @@
     result.innerHTML = "";
     hideScanNextButton();
 
+    // ✅ also reset update button + id
+    hideUpdateButton();
+    lastScannedUserId = null;
+
     try { qr.stop(); } catch(e) {}
     showLogin();
   });
@@ -143,10 +164,44 @@
     isProcessing = false;
     result.innerHTML = "";
     hideScanNextButton();
+
+    // ✅ reset update button + id
+    hideUpdateButton();
+    lastScannedUserId = null;
+
     startScanner();
   }
 
   scanNextBtn.addEventListener("click", resetAndScanNext);
+
+  // ✅ Update button click
+  updateBtn.addEventListener("click", async () => {
+    const token = getToken();
+    if (!token || !lastScannedUserId) {
+      alert("User not available for update");
+      return;
+    }
+
+    try {
+      const r = await fetch(`${API_BASE}/user/${lastScannedUserId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      const data = await r.json();
+      if (!data.success) {
+        alert(data.message || "Unable to fetch user");
+        return;
+      }
+
+      // ✅ save for update page autofill
+      localStorage.setItem("updateUserData", JSON.stringify(data.user));
+
+      // ✅ redirect to update
+      window.location.href = "update.html?from=scanner";
+    } catch (e) {
+      alert("Failed to open update");
+    }
+  });
 
   // ✅ Start scanner
   function startScanner() {
@@ -165,7 +220,6 @@
 
         const action = document.getElementById("scanType").value;
 
-        // ✅ call protected scan API using token
         fetch(`${qrText}?action=${action}`, {
           headers: {
             "Authorization": `Bearer ${token}`
@@ -173,7 +227,8 @@
         })
           .then(r => r.json())
           .then(res => {
-            // ✅ if token expired / invalid
+
+            // ✅ session expired handling
             if (res.message && (res.message.includes("Invalid/Expired") || res.message.includes("login required"))) {
               clearToken();
               result.innerHTML = `<h2 style="color:red;">Session expired. Login again ❌</h2>`;
@@ -184,13 +239,26 @@
             if (!res.success) {
               result.innerHTML = `<h2 style="color:red;">${safe(res.message)} ❌</h2>`;
               showScanNextButton();
+              hideUpdateButton();
+              lastScannedUserId = null;
               return;
+            }
+
+            // ✅ Extract mongo userId from scanned QR URL
+            try {
+              const urlObj = new URL(qrText);
+              const parts = urlObj.pathname.split("/");
+              lastScannedUserId = parts[parts.length - 1]; // mongo id
+            } catch (e) {
+              lastScannedUserId = null;
             }
 
             result.innerHTML = `
               <h2 style="color:green;">${safe(res.message)} ✔</h2>
 
               <div style="margin-top:10px;">
+                <b>Serial No:</b> ${safe(res.serialNo)}<br>
+
                 <b>Name:</b> ${safe(res.name)}<br>
                 <b>Phone:</b> ${safe(res.phone)}<br>
                 <b>Manual Code:</b> ${safe(res.manualCode)}<br>
@@ -204,6 +272,7 @@
 
                 <b>Zone Day 1:</b> ${res.zoneDay1 ? res.zoneDay1 : "<span style='color:gray;'>Not Set</span>"}<br>
                 <b>Zone Day 2:</b> ${res.zoneDay2 ? res.zoneDay2 : "<span style='color:gray;'>Not Set</span>"}<br>
+
                 <b>Referred By:</b> ${safe(res.referredBy)}<br>
 
                 <br>
@@ -219,20 +288,27 @@
             `;
 
             showScanNextButton();
+
+            // ✅ show update button ONLY if user id found
+            if (lastScannedUserId) {
+              showUpdateButton();
+            } else {
+              hideUpdateButton();
+            }
           })
           .catch(() => {
             result.innerHTML = `<h2 style="color:red;">Scan failed ❌</h2>`;
             showScanNextButton();
+            hideUpdateButton();
+            lastScannedUserId = null;
           })
           .finally(() => {
-            // ✅ Stop scanner and WAIT for user to click "Scan Next"
             qr.stop();
           });
       }
     );
   }
 
-  // ✅ Auto start: if token already exists, scanner starts directly
   if (getToken()) {
     showScanner();
     startScanner();

@@ -24,7 +24,6 @@
 </div>
 
 <script>
-  // 👉 CHANGE THIS FOR DEPLOYMENT
   // const API_BASE = "http://localhost:3000";
   const API_BASE = "https://qr-backend-5qot.onrender.com";
 
@@ -56,20 +55,21 @@
         result.innerHTML = `
           <h2 style="color:green;">${action === "gate" ? "Gate" : "Washroom"} Updated ✔</h2>
 
+          <b>Serial No:</b> ${safe(res.serialNo)}<br>
+
           <b>Name:</b> ${safe(res.name)}<br>
           <b>Phone:</b> ${safe(res.phone)}<br>
           <b>Manual Code:</b> ${safe(res.manualCode)}<br>
 
           <br>
 
-          <!-- ✅ Optional fields -->
           <b>Address:</b> ${safe(res.address)}<br>
           <b>Car Voucher No:</b> ${safe(res.carVoucherNumber)}<br>
           <b>Car Number:</b> ${safe(res.carNumber)}<br>
 
-          <!-- ✅ NEW -->
           <b>Zone Day 1:</b> ${res.zoneDay1 ? res.zoneDay1 : "<span style='color:gray;'>Not Set</span>"}<br>
           <b>Zone Day 2:</b> ${res.zoneDay2 ? res.zoneDay2 : "<span style='color:gray;'>Not Set</span>"}<br>
+
           <b>Referred By:</b> ${safe(res.referredBy)}<br>
 
           <br>

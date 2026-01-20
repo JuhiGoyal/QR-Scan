@@ -12,7 +12,6 @@
 </div>
 
 <script>
-  // 👉 REMOVE localhost before uploading:
   // const API_BASE = "http://localhost:3000";
   const API_BASE = "https://qr-backend-5qot.onrender.com";
 
@@ -28,6 +27,9 @@
           <div class="card">
             <h3>${safe(u.name)}</h3>
 
+            <!-- ✅ Serial No -->
+            <p><b>Serial No:</b> ${safe(u.serialNo)}</p>
+
             <p><b>Phone:</b> ${safe(u.phone)}</p>
             <p><b>Gender:</b> ${safe(u.gender)}</p>
             <p><b>Aadhaar:</b> ${safe(u.aadhaarNumber)}</p>
@@ -36,7 +38,7 @@
             <p><b>Car Voucher No:</b> ${safe(u.carVoucherNumber)}</p>
             <p><b>Car Number:</b> ${safe(u.carNumber)}</p>
 
-            <!-- ✅ NEW: ZONES -->
+            <!-- ✅ ZONES -->
             <p><b>Zone Day 1:</b>
               ${u.zoneDay1 ? u.zoneDay1 : "<span style='color:gray;'>Not Set</span>"}
             </p>
@@ -45,7 +47,7 @@
               ${u.zoneDay2 ? u.zoneDay2 : "<span style='color:gray;'>Not Set</span>"}
             </p>
 
-            <!-- ✅ NEW: REFERRED BY -->
+            <!-- ✅ Preferred By -->
             <p><b>Referred By:</b> ${safe(u.referredBy)}</p>
 
             <p><b>Manual Code:</b> ${safe(u.manualCode)}</p>

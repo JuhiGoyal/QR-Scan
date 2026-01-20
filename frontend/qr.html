@@ -12,16 +12,18 @@
   <div class="card" id="card" style="display:none;">
     <img id="qrImg" width="260" style="border:2px solid #1e4db7; border-radius:10px;"><br><br>
 
+    <!-- ✅ Serial No -->
+    <p><b>Serial No:</b> <span id="serialNo"></span></p>
+
     <p><b>Name:</b> <span id="name"></span></p>
     <p><b>Phone:</b> <span id="phone"></span></p>
     <p><b>Aadhaar:</b> <span id="aadhaar"></span></p>
 
-    <!-- ✅ NEW -->
     <p><b>Address:</b> <span id="address"></span></p>
     <p><b>Car Voucher No:</b> <span id="carVoucherNumber"></span></p>
     <p><b>Car Number:</b> <span id="carNumber"></span></p>
 
-    <!-- ✅ UPDATED ZONES + REFERRED BY -->
+    <!-- ✅ Zones + Preferred By -->
     <p><b>Zone Day 1:</b> <span id="zoneDay1"></span></p>
     <p><b>Zone Day 2:</b> <span id="zoneDay2"></span></p>
     <p><b>Referred By:</b> <span id="referredBy"></span></p>
@@ -55,7 +57,6 @@
     return (v === undefined || v === null || v === "") ? "-" : v;
   }
 
-  // ✅ Download function
   async function downloadQR(qrUrl, manualCode) {
     try {
       if (!qrUrl || !manualCode) {
@@ -71,7 +72,7 @@
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${manualCode}.png`;   // ✅ filename = manualCode
+      a.download = `${manualCode}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -83,7 +84,6 @@
     }
   }
 
-  // Get stored data
   const data = JSON.parse(localStorage.getItem("qrUser"));
 
   if (!data || !data.qrImageUrl || !data.manualCode) {
@@ -91,25 +91,25 @@
   } else {
     document.getElementById("card").style.display = "block";
 
-    // QR + basic
     document.getElementById("qrImg").src = data.qrImageUrl;
+
+    // ✅ Serial No
+    document.getElementById("serialNo").innerText = safe(data.serialNo);
+
     document.getElementById("name").innerText = safe(data.name);
     document.getElementById("phone").innerText = safe(data.phone);
     document.getElementById("aadhaar").innerText = safe(data.aadhaarNumber);
 
-    // ✅ NEW fields
     document.getElementById("address").innerText = safe(data.address);
     document.getElementById("carVoucherNumber").innerText = safe(data.carVoucherNumber);
     document.getElementById("carNumber").innerText = safe(data.carNumber);
 
-    // ✅ UPDATED: zones + referredBy
     document.getElementById("zoneDay1").innerHTML = data.zoneDay1 ? data.zoneDay1 : "<span style='color:gray;'>Not Set</span>";
     document.getElementById("zoneDay2").innerHTML = data.zoneDay2 ? data.zoneDay2 : "<span style='color:gray;'>Not Set</span>";
     document.getElementById("referredBy").innerText = safe(data.referredBy);
 
     document.getElementById("manual").innerText = safe(data.manualCode);
 
-    // ✅ Show download button & attach handler
     const btn = document.getElementById("downloadBtn");
     btn.style.display = "inline-block";
     btn.onclick = () => downloadQR(data.qrImageUrl, data.manualCode);
