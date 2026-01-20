@@ -216,17 +216,19 @@
         <b>Washroom:</b> ${safe(u.washroomStatus)}<br><br>
 
         <button type="button" onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
-        <button type="button" onclick="window.location.href='scanner.html'" style="margin-left:10px;">Open Scanner</button>
 
-        ${
-          fromScanner
-            ? `<button type="button"
-                  onclick="localStorage.removeItem('updateUserData'); window.location.href='scanner.html';"
-                  style="margin-left:10px; background:#1e4db7; color:white;">
-                  Scan Next
-               </button>`
-            : ""
-        }
+${
+  fromScanner
+    ? `<button type="button"
+          onclick="localStorage.removeItem('updateUserData'); window.location.href='scanner.html';"
+          style="margin-left:10px; background:#1e4db7; color:white;">
+          Scan Next
+       </button>`
+    : `<button type="button" onclick="window.location.href='scanner.html'" style="margin-left:10px;">
+          Open Scanner
+       </button>`
+}
+
       `;
 
       // ✅ clear saved user data after update (only scanner flow)
