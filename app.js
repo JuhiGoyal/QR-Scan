@@ -287,9 +287,9 @@ app.get("/scan/:id", verifyScannerToken, async (req, res) => {
   const { id } = req.params;
   const { action } = req.query;
 
-  if (!isEventDay()) {
-    return res.json({ success: false, message: "QR scanning will be active only on event day" });
-  }
+  // if (!isEventDay()) {
+  //   return res.json({ success: false, message: "QR scanning will be active only on event day" });
+  // }
 
   const user = await User.findById(id);
   if (!user) {
