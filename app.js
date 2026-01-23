@@ -56,18 +56,24 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 
 /* ---------------- HELPER: Event Day Check ---------------- */
+function getISTDateString() {
+  const now = new Date();
+  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  return ist.toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
 function isEventDay() {
   const eventDate = process.env.EVENT_DATE; // YYYY-MM-DD
   if (!eventDate) return true;
 
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  const today = `${yyyy}-${mm}-${dd}`;
+  const todayIST = getISTDateString();
 
-  return today === eventDate;
+  // ✅ optional debug (1 time check)
+  console.log("UTC:", new Date().toISOString(), "| IST:", todayIST, "| EVENT_DATE:", eventDate);
+
+  return todayIST === eventDate;
 }
+
 
 /* ---------------- AUTH: Scanner Login ---------------- */
 app.post("/scanner-login", (req, res) => {
