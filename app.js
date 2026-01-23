@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema({
 
   lastGateUpdate: Date,
   lastWashroomUpdate: Date,
-
+  lastManualUpdate: Date,
   qrImageUrl: String
 });
 
@@ -351,7 +351,7 @@ app.get("/manual", async (req, res) => {
     user.washroomStatus = user.washroomStatus === "IN" ? "OUT" : "IN";
     user.lastWashroomUpdate = new Date();
   }
-
+  user.lastManualUpdate = new Date();
   await user.save();
 
   res.json({
